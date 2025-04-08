@@ -2,7 +2,33 @@
 
 This repository contains comprehensive notes on deep learning principles, including theoretical explanations, mathematical formulas, and reference code examples. It is designed to provide a solid foundation for understanding and applying deep learning techniques.
 
-## Contents
+## Detailed Table of Contents
+
+### Core Concepts
+- Neural Network Fundamentals
+- Forward & Backward Propagation
+- Activation Functions
+- Loss Functions & Optimizers
+
+### Key Algorithms
+- Convolutional Neural Networks (CNN)
+- Recurrent Neural Networks (RNN/LSTM)
+- Attention Mechanisms
+- Transformer Architecture
+
+### Practical Applications
+- Image Classification
+- Object Detection
+- Natural Language Processing
+- Generative Adversarial Networks (GAN)
+
+### Mathematical Foundations
+- Linear Algebra Review
+- Probability & Statistics
+- Information Theory Basics
+- Optimization Theory
+
+## Main Contents
 
 - **Theory**: Detailed explanations of deep learning concepts and methodologies.
 - **Formulas**: Mathematical representations and derivations used in deep learning.
