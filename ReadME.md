@@ -2,6 +2,29 @@
 
 This repository contains comprehensive notes on deep learning principles, including theoretical explanations, mathematical formulas, and reference code examples. It is designed to provide a solid foundation for understanding and applying deep learning techniques.
 
+## Repository Structure
+
+- **tensorflow/**: TensorFlow-specific implementations and examples, including:
+  - Basic tensor operations
+  - GAN implementations
+  - Graph Neural Networks (GNN)
+  - Natural Language Processing (NLP) models
+  - Recurrent Neural Networks (RNN)
+  - Convolutional Neural Networks (CNN)
+  - Linear models
+  - Probabilistic modeling with TensorFlow
+  - Detailed notes and explanations
+
+- **pytorch/**: PyTorch-specific implementations and examples
+
+- **other/**: Personal insights and conceptual notes on deep learning, including:
+  - Model architecture analysis
+  - Dimension and parameter relationships
+  - Architectural comparisons
+  - Implementation patterns
+
+- **images/**: Visual aids and diagrams supporting the notes
+
 ## Detailed Table of Contents
 
 ### Core Concepts
