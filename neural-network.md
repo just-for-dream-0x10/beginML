@@ -19,11 +19,11 @@ Neural networks are a type of machine learning model in the field of artificial 
 
 The input layer/hidden layer/output layer are each composed of several neurons (rows/columns). Signals are transmitted unidirectionally from one layer to the next, with neurons in each layer sending their output signals as inputs to neurons in the next layer. Each neuron in each layer is connected to every neuron in the next layer.
 
-![neural-workflow](./images/neural-network-wrokflow.jpg)
+![neural-workflow](./images/netural-network-workflow.png)
 
 The above figure shows the processing of a simple neuron, combining weights and input signals to generate an output signal modified by an activation function.
 
-![layer](./images/layer.jpg)
+![layer](./images/layers.png)
 
 ## Neural Network
 ### Classification
@@ -59,11 +59,11 @@ The first step is to calculate the error between the output of the neural networ
 
 Then, the delta must be calculated for each neuron in all hidden layers of the network. The responsibility that each neuron bears for the incorrect output in the output layer must be clarified. The **deltas in the output layer will be used to calculate the deltas in the previous hidden layer.** The **delta of the upper layer** can be calculated based on the **dot product of the weights of various neurons in the lower layer and the deltas already calculated in the lower layer**. Multiplying this value by the derivative of the activation function called on the neuron's final output (cached before calling the activation function) gives the delta of the current neuron.
 
-![delta](./images/calculate-delta.jpg)
+![delta](./images/calculate-delta.png)
 
 Tip: The weights of each neuron in the network must be updated. The update method is to multiply the most recent input of each weight, the neuron's delta, and a number called the **learning rate**, and then **add the result to the existing weight**. This method of updating weights is called **gradient descent**. To give an imperfect example, it's similar to going to a place where delta is the direction of our destination, indicating that the neuron's error function is constantly approaching the point of minimum error, and the learning rate is the speed of walking, requiring constant trial and error.
 
-![update weights](./images/update-weights.jpg)
+![update weights](./images/update-weights.png)
 
 Once the weights are updated, the neural network can be trained again with other inputs and expected outputs, and this process will continue to repeat.
 
