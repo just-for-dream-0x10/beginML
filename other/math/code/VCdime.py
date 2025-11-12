@@ -888,6 +888,336 @@ output_file = os.path.join(output_dir, '12_pac_framework.html')
 fig12.write_html(output_file, include_mathjax='cdn')
 print(f"   ✅ 保存: {output_file}")
 
+# ============================================
+# 13. 深度学习VC维悖论
+# ============================================
+print("\n1️⃣3️⃣ 创建深度学习VC维悖论可视化...")
+
+# 模拟深度学习中的双下降现象
+model_complexity = np.linspace(0.1, 100, 200)
+
+# 经典理论：误差随复杂度单调递增
+classical_error = 0.1 + 0.05 * np.log(model_complexity + 1)
+
+# 实际观察：双下降现象
+interpolation_point = 20  # 插值阈值
+double_descent = np.zeros_like(model_complexity)
+
+# 第一段：经典过拟合
+mask1 = model_complexity < interpolation_point
+double_descent[mask1] = 0.1 + 0.05 * np.log(model_complexity[mask1] + 1)
+
+# 第二段：插值区域（误差达到峰值）
+mask2 = (model_complexity >= interpolation_point) & (model_complexity < 40)
+double_descent[mask2] = 0.3 - 0.01 * (model_complexity[mask2] - interpolation_point)
+
+# 第三段：过参数化区域（误差再次下降）
+mask3 = model_complexity >= 40
+double_descent[mask3] = 0.1 + 0.5 / np.sqrt(model_complexity[mask3] - 35)
+
+fig13 = go.Figure()
+
+# 经典理论曲线
+fig13.add_trace(go.Scatter(
+    x=model_complexity, y=classical_error,
+    mode='lines', name='经典VC理论',
+    line=dict(color='red', width=3, dash='dash'),
+    hovertemplate='复杂度: %{x:.2f}<br>误差: %{y:.3f}'
+))
+
+# 实际双下降曲线
+fig13.add_trace(go.Scatter(
+    x=model_complexity, y=double_descent,
+    mode='lines', name='实际观察（双下降）',
+    line=dict(color='blue', width=3),
+    fill='tonexty', fillcolor='rgba(0,0,255,0.1)',
+    hovertemplate='复杂度: %{x:.2f}<br>误差: %{y:.3f}'
+))
+
+# 标记关键点
+fig13.add_trace(go.Scatter(
+    x=[interpolation_point], y=[double_descent[np.where(model_complexity >= interpolation_point)[0][0]]],
+    mode='markers', name='插值阈值',
+    marker=dict(size=15, color='green', symbol='star')
+))
+
+fig13 = add_formula_annotation(fig13,
+    r"$\text{深度学习悖论：} \text{VC维} \to \infty \quad \text{但} \quad \text{泛化误差} \downarrow$",
+    x=0.5, y=1.05)
+
+fig13.update_layout(
+    title='深度学习的VC维悖论：双下降现象',
+    xaxis_title='模型复杂度（参数量/VC维）',
+    xaxis_type='log',
+    yaxis_title='泛化误差',
+    height=700,
+    legend=dict(x=0.02, y=0.98, bgcolor='rgba(255,255,255,0.8)'),
+    margin=dict(t=120, b=60, l=60, r=60),
+    annotations=[
+        dict(x=5, y=0.2, text='欠拟合区',
+             showarrow=False, font=dict(size=12, color='blue')),
+        dict(x=30, y=0.3, text='插值区<br>（误差峰值）',
+             showarrow=False, font=dict(size=12, color='red')),
+        dict(x=80, y=0.15, text='过参数化区<br>（误差下降）',
+             showarrow=False, font=dict(size=12, color='green'))
+    ]
+)
+
+output_file = os.path.join(output_dir, '13_deep_learning_paradox.html')
+fig13.write_html(output_file, include_mathjax='cdn')
+print(f"   ✅ 保存: {output_file}")
+
+# ============================================
+# 14. 正则化策略对比
+# ============================================
+print("\n1️⃣4️⃣ 创建正则化策略对比可视化...")
+
+# 模拟不同正则化策略的效果
+epochs = np.arange(0, 100)
+np.random.seed(42)
+
+# 无正则化（严重过拟合）
+train_loss_no_reg = 0.5 * np.exp(-epochs/20) + 0.05 * np.random.normal(0, 0.02, len(epochs))
+val_loss_no_reg = 0.5 * np.exp(-epochs/20) + 0.1 * (1 - np.exp(-epochs/30)) + 0.05 * np.random.normal(0, 0.02, len(epochs))
+
+# L2正则化
+train_loss_l2 = 0.5 * np.exp(-epochs/25) + 0.1 + 0.05 * np.random.normal(0, 0.02, len(epochs))
+val_loss_l2 = 0.5 * np.exp(-epochs/25) + 0.12 + 0.05 * np.random.normal(0, 0.02, len(epochs))
+
+# Dropout
+train_loss_dropout = 0.5 * np.exp(-epochs/30) + 0.15 + 0.05 * np.random.normal(0, 0.02, len(epochs))
+val_loss_dropout = 0.5 * np.exp(-epochs/30) + 0.13 + 0.05 * np.random.normal(0, 0.02, len(epochs))
+
+# 早停
+early_stop_epoch = 40
+train_loss_early = train_loss_l2.copy()
+val_loss_early = val_loss_l2.copy()
+val_loss_early[early_stop_epoch:] = val_loss_early[early_stop_epoch]
+
+fig14 = make_subplots(
+    rows=2, cols=2,
+    subplot_titles=('无正则化', 'L2正则化', 'Dropout', '早停'),
+    specs=[[{'type': 'scatter'}, {'type': 'scatter'}],
+           [{'type': 'scatter'}, {'type': 'scatter'}]]
+)
+
+# 无正则化
+fig14.add_trace(go.Scatter(x=epochs, y=train_loss_no_reg, mode='lines',
+                          name='训练损失', line=dict(color='blue')),
+               row=1, col=1)
+fig14.add_trace(go.Scatter(x=epochs, y=val_loss_no_reg, mode='lines',
+                          name='验证损失', line=dict(color='red')),
+               row=1, col=1)
+
+# L2正则化
+fig14.add_trace(go.Scatter(x=epochs, y=train_loss_l2, mode='lines',
+                          name='训练损失', line=dict(color='blue'), showlegend=False),
+               row=1, col=2)
+fig14.add_trace(go.Scatter(x=epochs, y=val_loss_l2, mode='lines',
+                          name='验证损失', line=dict(color='red'), showlegend=False),
+               row=1, col=2)
+
+# Dropout
+fig14.add_trace(go.Scatter(x=epochs, y=train_loss_dropout, mode='lines',
+                          name='训练损失', line=dict(color='blue'), showlegend=False),
+               row=2, col=1)
+fig14.add_trace(go.Scatter(x=epochs, y=val_loss_dropout, mode='lines',
+                          name='验证损失', line=dict(color='red'), showlegend=False),
+               row=2, col=1)
+
+# 早停
+fig14.add_trace(go.Scatter(x=epochs[:early_stop_epoch+1], y=train_loss_early[:early_stop_epoch+1], 
+                          mode='lines', name='训练损失', line=dict(color='blue'), showlegend=False),
+               row=2, col=2)
+fig14.add_trace(go.Scatter(x=epochs[:early_stop_epoch+1], y=val_loss_early[:early_stop_epoch+1], 
+                          mode='lines', name='验证损失', line=dict(color='red'), showlegend=False),
+               row=2, col=2)
+
+# 更新坐标轴
+for i in range(1, 3):
+    for j in range(1, 3):
+        fig14.update_xaxes(title_text='训练轮次', row=i, col=j)
+        fig14.update_yaxes(title_text='损失值', row=i, col=j)
+
+fig14 = add_formula_annotation(fig14,
+    r"$\text{正则化策略：控制有效VC维} \quad \text{无正则化} \to \text{高VC维} \to \text{过拟合}$",
+    x=0.5, y=1.03)
+
+fig14.update_layout(
+    title='正则化策略对比：如何控制有效VC维',
+    height=800,
+    showlegend=True,
+    margin=dict(t=120, b=60, l=60, r=60)
+)
+
+output_file = os.path.join(output_dir, '14_regularization_strategies.html')
+fig14.write_html(output_file, include_mathjax='cdn')
+print(f"   ✅ 保存: {output_file}")
+
+# ============================================
+# 15. Rademacher复杂度 vs VC维
+# ============================================
+print("\n1️⃣5️⃣ 创建Rademacher复杂度对比可视化...")
+
+# 比较VC维界和Rademacher复杂度界
+n_samples = np.linspace(50, 1000, 100)
+vc_dim = 20
+
+# VC维界（较松）
+vc_bound = np.sqrt((vc_dim * np.log(2 * n_samples / vc_dim) + np.log(4)) / n_samples)
+
+# Rademacher复杂度界（更紧）
+rademacher_bound = np.sqrt(2 * np.log(2 * n_samples) / n_samples) + np.sqrt(2 * vc_dim * np.log(n_samples) / n_samples) / n_samples
+
+# 实际泛化误差（模拟）
+actual_error = 0.1 + 0.05 / np.sqrt(n_samples)
+
+fig15 = go.Figure()
+
+fig15.add_trace(go.Scatter(
+    x=n_samples, y=vc_bound,
+    mode='lines', name='VC维界（较松）',
+    line=dict(color='red', width=3, dash='dash'),
+    hovertemplate='样本数: %{x:.0f}<br>VC界: %{y:.4f}'
+))
+
+fig15.add_trace(go.Scatter(
+    x=n_samples, y=rademacher_bound,
+    mode='lines', name='Rademacher界（更紧）',
+    line=dict(color='orange', width=3),
+    hovertemplate='样本数: %{x:.0f}<br>Rademacher界: %{y:.4f}'
+))
+
+fig15.add_trace(go.Scatter(
+    x=n_samples, y=actual_error,
+    mode='lines', name='实际泛化误差',
+    line=dict(color='blue', width=3),
+    hovertemplate='样本数: %{x:.0f}<br>实际误差: %{y:.4f}'
+))
+
+fig15 = add_formula_annotation(fig15,
+    r"$\mathcal{R}_n(\mathcal{H}) = \mathbb{E}_\sigma \left[ \sup_{h \in \mathcal{H}} \frac{1}{n}\sum_{i=1}^n \sigma_i h(x_i) \right]$",
+    x=0.5, y=1.05)
+
+fig15.update_layout(
+    title='VC维 vs Rademacher复杂度：界的紧度对比',
+    xaxis_title='训练样本数 n',
+    yaxis_title='泛化误差上界',
+    height=700,
+    legend=dict(x=0.02, y=0.98, bgcolor='rgba(255,255,255,0.8)'),
+    margin=dict(t=120, b=60, l=60, r=60),
+    annotations=[
+        dict(x=200, y=0.4, text='VC维界过于保守',
+             showarrow=True, arrowhead=2, ax=-50, ay=-30,
+             font=dict(size=12, color='red')),
+        dict(x=500, y=0.25, text='Rademacher界更接近实际',
+             showarrow=True, arrowhead=2, ax=-50, ay=-30,
+             font=dict(size=12, color='orange'))
+    ]
+)
+
+output_file = os.path.join(output_dir, '15_rademacher_vs_vc.html')
+fig15.write_html(output_file, include_mathjax='cdn')
+print(f"   ✅ 保存: {output_file}")
+
+# ============================================
+# 16. 数据分布对VC维的影响
+# ============================================
+print("\n1️⃣6️⃣ 创建数据分布影响可视化...")
+
+# 生成不同分布的数据
+np.random.seed(42)
+
+# 简单分布（线性可分）
+simple_x = np.random.randn(50, 2)
+simple_y = (simple_x[:, 0] + simple_x[:, 1] > 0).astype(int)
+
+# 复杂分布（需要高VC维）
+complex_x = np.random.randn(50, 2)
+complex_y = ((complex_x[:, 0]**2 + complex_x[:, 1]**2 > 1) & 
+             (complex_x[:, 0] - complex_x[:, 1] > 0)).astype(int)
+
+fig16 = make_subplots(
+    rows=1, cols=2,
+    subplot_titles=('简单分布（线性可分）', '复杂分布（需要高VC维）'),
+    specs=[[{'type': 'scatter'}, {'type': 'scatter'}]]
+)
+
+# 简单分布
+fig16.add_trace(go.Scatter(
+    x=simple_x[simple_y==0, 0], y=simple_x[simple_y==0, 1],
+    mode='markers', name='类0',
+    marker=dict(color='red', size=8),
+    showlegend=False),
+    row=1, col=1
+)
+fig16.add_trace(go.Scatter(
+    x=simple_x[simple_y==1, 0], y=simple_x[simple_y==1, 1],
+    mode='markers', name='类1',
+    marker=dict(color='blue', size=8),
+    showlegend=False),
+    row=1, col=1
+)
+
+# 添加线性分隔线
+x_line = np.linspace(-3, 3, 100)
+y_line = -x_line
+fig16.add_trace(go.Scatter(
+    x=x_line, y=y_line,
+    mode='lines', name='线性边界',
+    line=dict(color='green', width=3, dash='dash'),
+    showlegend=False),
+    row=1, col=1
+)
+
+# 复杂分布
+fig16.add_trace(go.Scatter(
+    x=complex_x[complex_y==0, 0], y=complex_x[complex_y==0, 1],
+    mode='markers', name='类0',
+    marker=dict(color='red', size=8),
+    showlegend=False),
+    row=1, col=2
+)
+fig16.add_trace(go.Scatter(
+    x=complex_x[complex_y==1, 0], y=complex_x[complex_y==1, 1],
+    mode='markers', name='类1',
+    marker=dict(color='blue', size=8),
+    showlegend=True),
+    row=1, col=2
+)
+
+# 添加非线性边界（圆形）
+theta = np.linspace(0, 2*np.pi, 100)
+circle_x = np.cos(theta)
+circle_y = np.sin(theta)
+fig16.add_trace(go.Scatter(
+    x=circle_x, y=circle_y,
+    mode='lines', name='非线性边界',
+    line=dict(color='green', width=3, dash='dash'),
+    showlegend=False),
+    row=1, col=2
+)
+
+fig16.update_xaxes(title_text='x₁', row=1, col=1)
+fig16.update_xaxes(title_text='x₁', row=1, col=2)
+fig16.update_yaxes(title_text='x₂', row=1, col=1)
+fig16.update_yaxes(title_text='x₂', row=1, col=2)
+
+fig16 = add_formula_annotation(fig16,
+    r"$\text{VC维假设最坏分布，实际数据有结构} \quad \Rightarrow \quad \text{理论界过于保守}$",
+    x=0.5, y=1.05)
+
+fig16.update_layout(
+    title='数据分布对VC维实际需求的影响',
+    height=600,
+    legend=dict(x=0.98, y=0.02, bgcolor='rgba(255,255,255,0.8)'),
+    margin=dict(t=120, b=60, l=60, r=60)
+)
+
+output_file = os.path.join(output_dir, '16_data_distribution_impact.html')
+fig16.write_html(output_file, include_mathjax='cdn')
+print(f"   ✅ 保存: {output_file}")
+
 print("\n" + "=" * 60)
 print("✨ 补充可视化创建完成！")
 print("=" * 60)
@@ -897,5 +1227,9 @@ print("   9. XOR问题（4个点无法打散）")
 print("   10. 增长函数可视化")
 print("   11. 不同模型VC维对比")
 print("   12. PAC学习框架")
-print("\n总计: 12个交互式HTML文件")
+print("   13. 深度学习VC维悖论")
+print("   14. 正则化策略对比")
+print("   15. Rademacher复杂度 vs VC维")
+print("   16. 数据分布对VC维的影响")
+print("\n总计: 16个交互式HTML文件")
 print("=" * 60)
