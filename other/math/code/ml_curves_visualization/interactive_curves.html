@@ -1,0 +1,1936 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>机器学习重要曲线交互式可视化</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+        .section h2 {
+            color: #2c3e50;
+            margin-top: 0;
+        }
+        .controls {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        .button:hover {
+            background-color: #2980b9;
+        }
+        .button.active {
+            background-color: #e74c3c;
+        }
+        .slider-container {
+            margin: 10px 0;
+            display: inline-block;
+        }
+        .slider {
+            width: 200px;
+            margin: 0 10px;
+        }
+        .info-panel {
+            background-color: #e8f4f8;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #3498db;
+        }
+        .curve-container {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .reference-curves {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid #e9ecef;
+            text-align: center;
+        }
+        .reference-curves h3 {
+            margin-top: 0;
+            color: #495057;
+            font-size: 16px;
+        }
+        .mode-description {
+            background-color: #fff;
+            padding: 12px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #6c757d;
+            text-align: left;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .diagnosis {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .underfitting {
+            background-color: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #c62828;
+        }
+        .overfitting {
+            background-color: #fff3e0;
+            color: #f57c00;
+            border-left: 4px solid #f57c00;
+        }
+        .goodfit {
+            background-color: #e8f5e8;
+            color: #4caf50;
+            border-left: 4px solid #4caf50;
+        }
+        .model-select {
+            margin: 10px;
+            padding: 5px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        .parameter-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 机器学习重要曲线交互式可视化</h1>
+        
+        <!-- 学习曲线部分 -->
+        <div class="section">
+            <h2>1. 学习曲线分析</h2>
+            
+            <div class="controls">
+                <label>选择模型: </label>
+                <select class="model-select" id="modelSelect">
+                    <option value="rf">Random Forest</option>
+                    <option value="svm">SVM (RBF)</option>
+                    <option value="lr">Logistic Regression</option>
+                </select>
+                
+                <label>训练数据比例: </label>
+                <div class="slider-container">
+                    <input type="range" class="slider" id="trainSizeSlider" min="10" max="90" value="50">
+                    <span id="trainSizeValue">50%</span>
+                </div>
+                
+                <label>显示模式: </label>
+                <select class="model-select" id="learningModeSelect">
+                    <option value="basic">基础模式</option>
+                    <option value="bias_variance">偏差-方差分解</option>
+                </select>
+                
+                <button class="button" onclick="updateLearningCurve()">更新曲线</button>
+                <button class="button" onclick="animateLearningCurve()">播放动画</button>
+            </div>
+            
+            <div class="info-panel">
+                <strong>学习曲线诊断指南:</strong><br>
+                🔴 <span class="underfitting">高偏差</span>: 训练和验证得分都很低 → 增加模型复杂度<br>
+                🔵 <span class="overfitting">高方差</span>: 训练得分高，验证得分低 → 增加数据或正则化<br>
+                🟢 <span class="goodfit">理想状态</span>: 两者都高且接近 → 模型状态良好
+            </div>
+            
+            <div class="reference-curves">
+                <h3>典型学习曲线模式</h3>
+                
+                <div class="controls">
+                    <label>选择模式: </label>
+                    <select class="model-select" id="curveModeSelect" onchange="updateReferenceCurves()">
+                        <option value="underfitting">欠拟合 (高偏差)</option>
+                        <option value="overfitting">过拟合 (高方差)</option>
+                        <option value="goodfit">理想拟合</option>
+                        <option value="comparison">三种模式对比</option>
+                        <option value="bias_variance_demo">偏差-方差分解演示</option>
+                    </select>
+                    
+                    <button class="button" onclick="animateReferenceCurves()">播放对比动画</button>
+                </div>
+                
+                <div class="curve-container">
+                    <div id="referenceCurvePlot"></div>
+                </div>
+                
+                <div class="mode-description" id="modeDescription">
+                    <strong>欠拟合特征:</strong><br>
+                    • 训练得分和验证得分都很低<br>
+                    • 两条曲线差距小，都处于低位<br>
+                    • 模型过于简单，无法捕捉数据规律<br>
+                    • 解决方案：增加模型复杂度、添加更多特征
+                </div>
+            </div>
+            
+            <div class="curve-container">
+                <div id="learningCurvePlot"></div>
+            </div>
+            
+            <div id="learningCurveDiagnosis" class="diagnosis">
+                点击"更新曲线"查看模型诊断结果
+            </div>
+        </div>
+        
+        <!-- ROC曲线部分 -->
+        <div class="section">
+            <h2>2. ROC曲线分析</h2>
+            
+            <div class="controls">
+                <label>模型性能等级: </label>
+                <div class="slider-container">
+                    <input type="range" class="slider" id="thresholdSlider" min="0" max="100" value="50">
+                    <span id="thresholdValue">中等</span>
+                </div>
+                
+                <label>工作点阈值: </label>
+                <div class="slider-container">
+                    <input type="range" class="slider" id="workingPointSlider" min="0" max="100" value="50">
+                    <span id="workingPointValue">0.50</span>
+                </div>
+                
+                <button class="button" onclick="updateROCCurve()">更新ROC曲线</button>
+                <button class="button" onclick="animateROCCurve()">播放动画</button>
+            </div>
+            
+            <div class="info-panel">
+                <strong>ROC曲线解读:</strong><br>
+                • AUC > 0.9: 优秀分类器<br>
+                • AUC 0.7-0.9: 良好分类器<br>
+                • AUC 0.5-0.7: 一般分类器<br>
+                • AUC < 0.5: 差分类器<br>
+                • 对角线: 随机分类器基准线
+            </div>
+            
+            <div class="curve-container">
+                <div id="rocCurvePlot"></div>
+            </div>
+            
+            <div id="rocCurveInfo" class="diagnosis">
+                AUC: <span id="aucValue">-</span>
+            </div>
+        </div>
+        
+        <!-- 验证曲线部分 -->
+        <div class="section">
+            <h2>3. 超参数验证曲线</h2>
+            
+            <div class="controls">
+                <label>参数类型: </label>
+                <select class="model-select" id="paramType">
+                    <option value="max_depth">Random Forest - max_depth</option>
+                    <option value="n_estimators">Random Forest - n_estimators</option>
+                    <option value="c">SVM - C参数</option>
+                    <option value="learning_rate">学习率参数</option>
+                    <option value="alpha">正则化参数 α</option>
+                </select>
+                
+                <label>X轴刻度: </label>
+                <select class="model-select" id="scaleType">
+                    <option value="linear">线性刻度</option>
+                    <option value="log">对数刻度</option>
+                </select>
+                
+                <button class="button" onclick="updateValidationCurve()">更新验证曲线</button>
+                <button class="button" onclick="animateValidationCurve()">播放动画</button>
+            </div>
+            
+            <div class="info-panel">
+                <strong>验证曲线使用指南:</strong><br>
+                • 寻找验证曲线峰值对应的参数值<br>
+                • 训练曲线和验证曲线差距大 → 过拟合<br>
+                • 两条曲线都很低 → 欠拟合<br>
+                • 参数选择: 选择验证得分最高的点
+            </div>
+            
+            <div class="curve-container">
+                <div id="validationCurvePlot"></div>
+            </div>
+            
+            <div id="validationCurveInfo" class="diagnosis">
+                最佳参数: <span id="bestParam">-</span>
+            </div>
+        </div>
+        
+        <!-- 损失曲线部分 -->
+        <div class="section">
+            <h2>4. 训练损失曲线</h2>
+            
+            <div class="controls">
+                <label>学习率: </label>
+                <div class="slider-container">
+                    <input type="range" class="slider" id="learningRateSlider" min="1" max="100" value="10">
+                    <span id="learningRateValue">0.01</span>
+                </div>
+                
+                <label>正则化强度: </label>
+                <div class="slider-container">
+                    <input type="range" class="slider" id="regularizationSlider" min="0" max="100" value="10">
+                    <span id="regularizationValue">0.1</span>
+                </div>
+                
+                <button class="button" onclick="startTraining()">开始训练</button>
+                <button class="button" onclick="stopTraining()">停止训练</button>
+                <button class="button" onclick="resetTraining()">重置</button>
+                <button class="button" onclick="startEarlyStopping()">早停演示</button>
+            </div>
+            
+            <div class="info-panel">
+                <strong>损失曲线诊断:</strong><br>
+                • 训练损失持续下降: 学习率可能太小<br>
+                • 训练损失震荡: 学习率可能太大<br>
+                • 验证损失开始上升: 过拟合，需要早停<br>
+                • 两者都收敛: 训练完成
+            </div>
+            
+            <div class="curve-container">
+                <div id="lossCurvePlot"></div>
+            </div>
+            
+            <div id="trainingStatus" class="diagnosis">
+                状态: 未开始训练
+            </div>
+        </div>
+        
+        <!-- 综合仪表板 -->
+        <div class="section">
+            <h2>5. 综合分析仪表板</h2>
+            
+            <div class="controls">
+                <button class="button" onclick="updateDashboard()">更新仪表板</button>
+                <button class="button" onclick="animateDashboard()">播放动画</button>
+            </div>
+            
+            <div class="info-panel">
+                <strong>仪表板功能:</strong><br>
+                • 同时展示多种评估指标<br>
+                • 模型性能对比分析<br>
+                • 特征重要性可视化<br>
+                • 混淆矩阵热力图
+            </div>
+            
+            <div class="curve-container">
+                <div id="dashboardPlot"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let learningCurveData = null;
+        let rocCurveData = null;
+        let validationCurveData = null;
+        let lossCurveData = null;
+        let dashboardData = null;
+        let trainingInterval = null;
+        let animationFrames = [];
+        
+        // 生成模拟数据
+        function generateLearningData(modelType, trainSize, mode = 'basic') {
+            const nPoints = 10;
+            const trainSizes = [];
+            const trainScores = [];
+            const valScores = [];
+            const biasSquared = []; // Bias²
+            const variance = [];
+            const noise = 0.05; // 不可约减噪声
+            
+            for (let i = 0; i < nPoints; i++) {
+                const size = Math.max(10, Math.floor((i + 1) / nPoints * trainSize));
+                trainSizes.push(size);
+                
+                // 更科学的学习曲线模拟
+                const dataRatio = size / trainSize;
+                const sampleComplexity = Math.log(size) / Math.log(trainSize); // 样本复杂度
+                
+                let idealAccuracy, baseBias, baseVariance;
+                switch(modelType) {
+                    case 'rf':
+                        idealAccuracy = 0.95; // 理想准确率
+                        baseBias = 0.08; // 基础偏差
+                        baseVariance = 0.12; // 基础方差
+                        break;
+                    case 'svm':
+                        idealAccuracy = 0.90;
+                        baseBias = 0.10;
+                        baseVariance = 0.10;
+                        break;
+                    case 'lr':
+                        idealAccuracy = 0.85;
+                        baseBias = 0.15;
+                        baseVariance = 0.08;
+                        break;
+                }
+                
+                // 计算当前数据量下的偏差²、方差
+                const currentBiasSquared = Math.pow(baseBias * Math.exp(-sampleComplexity * 0.3), 2);
+                const currentVariance = baseVariance / Math.sqrt(size / 20);
+                
+                // 总误差 = Bias² + Variance + Noise
+                const totalError = currentBiasSquared + currentVariance + noise;
+                
+                // 验证误差（包含过拟合效应）
+                const valError = totalError * (1 + 0.5 / Math.sqrt(size));
+                
+                // 训练误差（包含欠拟合效应）
+                const trainError = currentBiasSquared + currentVariance * (1 - dataRatio * 0.5) + noise * 0.3;
+                
+                // 转换为准确率：Accuracy = IdealAccuracy - Error
+                const trainScore = Math.max(0.1, Math.min(0.95, idealAccuracy - trainError));
+                const valScore = Math.max(0.1, Math.min(0.95, idealAccuracy - valError));
+                
+                trainScores.push(trainScore);
+                valScores.push(valScore);
+                
+                if (mode === 'bias_variance') {
+                    biasSquared.push(currentBiasSquared);
+                    variance.push(currentVariance);
+                }
+            }
+            
+            if (mode === 'bias_variance') {
+                return { trainSizes, trainScores, valScores, biasSquared, variance, noise, idealAccuracy };
+            }
+            return { trainSizes, trainScores, valScores };
+        }
+        
+        function generateROCData(threshold) {
+            const nPoints = 100;
+            const fpr = [];
+            const tpr = [];
+            
+            // 根据阈值生成不同的ROC曲线形状
+            for (let i = 0; i < nPoints; i++) {
+                const fp = i / (nPoints - 1);
+                let tp;
+                
+                if (threshold < 30) {
+                    // 低阈值：较差的分类器
+                    tp = fp * 0.6 + Math.random() * 0.1;
+                } else if (threshold < 70) {
+                    // 中等阈值：一般分类器  
+                    tp = Math.pow(fp, 0.3) * (0.7 + threshold / 100);
+                } else {
+                    // 高阈值：优秀分类器
+                    tp = Math.pow(fp, 0.15) * (0.8 + threshold / 200);
+                }
+                
+                // 确保TPR在合理范围内
+                tp = Math.min(Math.max(tp, 0), 1);
+                fpr.push(fp);
+                tpr.push(tp);
+            }
+            
+            // 计算AUC（梯形法则）
+            let auc = 0;
+            for (let i = 1; i < nPoints; i++) {
+                auc += (fpr[i] - fpr[i-1]) * (tpr[i] + tpr[i-1]) / 2;
+            }
+            
+            return { fpr, tpr, auc };
+        }
+        
+        function generateValidationData(paramType) {
+            let paramRange, trainScores, valScores;
+            
+            switch(paramType) {
+                case 'max_depth':
+                    paramRange = Array.from({length: 20}, (_, i) => i + 1);
+                    trainScores = paramRange.map(d => 0.9 - 0.3 * Math.exp(-d/5));
+                    valScores = paramRange.map(d => 0.85 - 0.4 * Math.exp(-d/3));
+                    break;
+                case 'n_estimators':
+                    paramRange = Array.from({length: 20}, (_, i) => (i + 1) * 10);
+                    trainScores = paramRange.map(n => 0.85 - 0.2 * Math.exp(-n/50));
+                    valScores = paramRange.map(n => 0.80 - 0.3 * Math.exp(-n/40));
+                    break;
+                case 'c':
+                    paramRange = Array.from({length: 20}, (_, i) => Math.pow(10, (i-10) * 0.5));
+                    trainScores = paramRange.map(c => 0.80 - 0.3 * Math.exp(-c/2));
+                    valScores = paramRange.map(c => 0.75 - 0.4 * Math.exp(-c/1.5));
+                    break;
+                case 'learning_rate':
+                    // 学习率通常在0.001到0.1之间，使用对数分布
+                    paramRange = Array.from({length: 20}, (_, i) => Math.pow(10, -3 + i * 0.15));
+                    trainScores = paramRange.map(lr => {
+                        if (lr < 0.01) return 0.6 + lr * 10; // 学习率太小，欠拟合
+                        if (lr > 0.05) return 0.7 - (lr - 0.05) * 5; // 学习率太大，过拟合
+                        return 0.85 - Math.abs(lr - 0.03) * 3; // 最优值附近
+                    });
+                    valScores = paramRange.map(lr => {
+                        if (lr < 0.01) return 0.55 + lr * 8;
+                        if (lr > 0.05) return 0.65 - (lr - 0.05) * 6;
+                        return 0.80 - Math.abs(lr - 0.025) * 4;
+                    });
+                    break;
+                case 'alpha':
+                    // 正则化参数通常在0.0001到1之间，使用对数分布
+                    paramRange = Array.from({length: 20}, (_, i) => Math.pow(10, -4 + i * 0.2));
+                    trainScores = paramRange.map(alpha => 0.9 - 0.1 * Math.exp(-alpha * 100));
+                    valScores = paramRange.map(alpha => 0.85 + 0.1 * Math.exp(-alpha * 50) - 0.2 * Math.exp(-alpha * 10));
+                    break;
+            }
+            
+            return { paramRange, trainScores, valScores };
+        }
+        
+        function generateReferenceLearningData(mode) {
+            const trainSizes = [];
+            const nSizes = 20;
+            
+            for (let i = 1; i <= nSizes; i++) {
+                trainSizes.push(i * 50); // 50, 100, 150, ..., 1000
+            }
+            
+            let trainScores, valScores, modeDescription;
+            
+            switch(mode) {
+                case 'underfitting':
+                    // 欠拟合：两条线都很低，差距小
+                    trainScores = trainSizes.map(size => 0.55 + 0.1 * Math.log(size/50));
+                    valScores = trainSizes.map(size => 0.50 + 0.08 * Math.log(size/50));
+                    modeDescription = `
+                        <strong>欠拟合特征:</strong><br>
+                        • 训练得分和验证得分都很低<br>
+                        • 两条曲线差距小，都处于低位<br>
+                        • 模型过于简单，无法捕捉数据规律<br>
+                        • 解决方案：增加模型复杂度、添加更多特征
+                    `;
+                    break;
+                    
+                case 'overfitting':
+                    // 过拟合：训练线很高，验证线较低，差距大
+                    trainScores = trainSizes.map(size => 0.95 - 0.05 * Math.exp(-size/200));
+                    valScores = trainSizes.map(size => 0.65 + 0.15 * Math.exp(-size/300));
+                    modeDescription = `
+                        <strong>过拟合特征:</strong><br>
+                        • 训练得分很高，验证得分明显较低<br>
+                        • 两条曲线差距大，形成明显"剪刀差"<br>
+                        • 模型过于复杂，学习了训练数据的噪声<br>
+                        • 解决方案：增加数据量、使用正则化、简化模型
+                    `;
+                    break;
+                    
+                case 'goodfit':
+                    // 理想拟合：两条线都较高且接近
+                    trainScores = trainSizes.map(size => 0.85 + 0.1 * (1 - Math.exp(-size/200)));
+                    valScores = trainSizes.map(size => 0.80 + 0.08 * (1 - Math.exp(-size/250)));
+                    modeDescription = `
+                        <strong>理想拟合特征:</strong><br>
+                        • 训练得分和验证得分都较高<br>
+                        • 两条曲线接近，差距合理<br>
+                        • 模型复杂度适中，泛化能力强<br>
+                        • 这是机器学习的目标状态
+                    `;
+                    break;
+                    
+                case 'bias_variance_demo':
+                    // 偏差-方差分解演示：返回误差分解数据
+                    const idealAccuracy = 0.90;
+                    const noise = 0.02;
+                    
+                    const biasSquared = trainSizes.map(size => {
+                        // 偏差随数据量增加而减小
+                        return Math.pow(0.15 * Math.exp(-Math.log(size/50) * 0.4), 2);
+                    });
+                    
+                    const variance = trainSizes.map(size => {
+                        // 方差随数据量增加而减小
+                        return 0.12 / Math.sqrt(size / 50);
+                    });
+                    
+                    // 计算总误差
+                    const totalError = biasSquared.map((bias, i) => bias + variance[i] + noise);
+                    
+                    // 转换为准确率
+                    trainScores = totalError.map(error => Math.max(0.1, idealAccuracy - error * 0.8));
+                    valScores = totalError.map(error => Math.max(0.1, idealAccuracy - error));
+                    
+                    modeDescription = `
+                        <strong>偏差-方差分解演示:</strong><br>
+                        • 左图：训练和验证准确率曲线<br>
+                        • 右图：误差分量分解 (Error = Bias² + Variance + Noise)<br>
+                        • 偏差²(Bias²)：随数据增加而减小（学习效应）<br>
+                        • 方差(Variance)：随数据增加而减小（泛化效应）<br>
+                        • 噪声(Noise)：恒定的不可约减误差<br>
+                        • 总误差验证：Bias² + Variance + Noise = 验证误差
+                    `;
+                    return { trainSizes, trainScores, valScores, biasSquared, variance, noise, idealAccuracy, modeDescription };
+                    
+                case 'comparison':
+                    // 对比模式：同时显示三种
+                    return generateComparisonData();
+            }
+            
+            return { trainSizes, trainScores, valScores, modeDescription };
+        }
+        
+        function generateComparisonData() {
+            const trainSizes = [];
+            for (let i = 1; i <= 20; i++) {
+                trainSizes.push(i * 50);
+            }
+            
+            const datasets = [
+                {
+                    name: '欠拟合',
+                    trainScores: trainSizes.map(size => 0.55 + 0.1 * Math.log(size/50)),
+                    valScores: trainSizes.map(size => 0.50 + 0.08 * Math.log(size/50)),
+                    color: 'red'
+                },
+                {
+                    name: '过拟合', 
+                    trainScores: trainSizes.map(size => 0.95 - 0.05 * Math.exp(-size/200)),
+                    valScores: trainSizes.map(size => 0.65 + 0.15 * Math.exp(-size/300)),
+                    color: 'orange'
+                },
+                {
+                    name: '理想拟合',
+                    trainScores: trainSizes.map(size => 0.85 + 0.1 * (1 - Math.exp(-size/200))),
+                    valScores: trainSizes.map(size => 0.80 + 0.08 * (1 - Math.exp(-size/250))),
+                    color: 'green'
+                }
+            ];
+            
+            const modeDescription = `
+                <strong>三种模式对比:</strong><br>
+                • <span style="color: red;">红色</span>：欠拟合 - 模型太简单<br>
+                • <span style="color: orange;">橙色</span>：过拟合 - 模型太复杂<br>
+                • <span style="color: green;">绿色</span>：理想拟合 - 复杂度适中<br>
+                • 观察训练得分和验证得分的差距及绝对水平
+            `;
+            
+            return { trainSizes, datasets, modeDescription };
+        }
+        
+        function generateLossData(learningRate, regularization) {
+            const epochs = [];
+            const trainLosses = [];
+            const valLosses = [];
+            
+            for (let epoch = 0; epoch < 100; epoch++) {
+                epochs.push(epoch);
+                const lr = learningRate / 1000;
+                const reg = regularization / 100;
+                
+                // 模拟训练损失下降
+                const trainLoss = 10 * Math.exp(-epoch * lr) + reg * epoch * 0.01;
+                trainLosses.push(trainLoss);
+                
+                // 模拟验证损失
+                let valLoss;
+                if (epoch < 60) {
+                    valLoss = 8 * Math.exp(-epoch * lr * 0.8) + reg * epoch * 0.02;
+                } else {
+                    valLoss = 2 + 0.01 * (epoch - 60) + reg * epoch * 0.02;
+                }
+                valLosses.push(valLoss);
+            }
+            
+            return { epochs, trainLosses, valLosses };
+        }
+        
+        function generateDashboardData() {
+            // 模拟综合数据
+            return {
+                learningCurve: generateLearningData('rf', 1000),
+                rocCurve: generateROCData(50),
+                featureImportance: [
+                    {feature: 'Feature_1', importance: 0.25},
+                    {feature: 'Feature_2', importance: 0.20},
+                    {feature: '3', importance: 0.15},
+                    {feature: '4', importance: 0.12},
+                    {feature: 'Feature_5', importance: 0.10},
+                    {feature: '6', importance: 0.08},
+                    {feature: '7', importance: 0.05},
+                    {feature: '8', importance: 0.03},
+                    {feature: '9', importance: 0.02},
+                    {feature: '10', importance: 0.01}
+                ],
+                modelComparison: [
+                    {model: 'Random Forest', score: 0.87},
+                    {model: 'SVM', score: 0.85},
+                    {model: 'Logistic Regression', score: 0.82}
+                ],
+                confusionMatrix: [
+                    [85, 15, 0, 0],
+                    [12, 88, 5, 0],
+                    [2, 3, 90, 5],
+                    [1, 1, 2, 96]
+                ]
+            };
+        }
+        
+        // 更新学习曲线
+        function updateLearningCurve() {
+            const modelType = document.getElementById('modelSelect').value;
+            const trainSize = parseInt(document.getElementById('trainSizeSlider').value);
+            const mode = document.getElementById('learningModeSelect').value;
+            
+            learningCurveData = generateLearningData(modelType, trainSize, mode);
+            
+            if (mode === 'bias_variance') {
+                // 偏差-方差分解模式：创建两个子图
+                const accuracyTraces = [
+                    {
+                        x: learningCurveData.trainSizes,
+                        y: learningCurveData.trainScores,
+                        type: 'scatter',
+                        mode: 'lines+markers',
+                        name: '训练集准确率',
+                        line: {color: 'blue', width: 3},
+                        xaxis: 'x1',
+                        yaxis: 'y1'
+                    },
+                    {
+                        x: learningCurveData.trainSizes,
+                        y: learningCurveData.valScores,
+                        type: 'scatter',
+                        mode: 'lines+markers',
+                        name: '验证集准确率',
+                        line: {color: 'red', width: 3},
+                        xaxis: 'x1',
+                        yaxis: 'y1'
+                    }
+                ];
+                
+                // 计算总误差用于验证
+                const totalError = learningCurveData.biasSquared.map((bias, i) => 
+                    bias + learningCurveData.variance[i] + learningCurveData.noise
+                );
+                
+                const errorTraces = [
+                    {
+                        x: learningCurveData.trainSizes,
+                        y: learningCurveData.biasSquared,
+                        type: 'scatter',
+                        mode: 'lines+markers',
+                        name: '偏差² (Bias²)',
+                        line: {color: 'orange', width: 3},
+                        xaxis: 'x2',
+                        yaxis: 'y2'
+                    },
+                    {
+                        x: learningCurveData.trainSizes,
+                        y: learningCurveData.variance,
+                        type: 'scatter',
+                        mode: 'lines+markers',
+                        name: '方差 (Variance)',
+                        line: {color: 'purple', width: 3},
+                        xaxis: 'x2',
+                        yaxis: 'y2'
+                    },
+                    {
+                        x: learningCurveData.trainSizes,
+                        y: learningCurveData.trainSizes.map(() => learningCurveData.noise),
+                        type: 'scatter',
+                        mode: 'lines',
+                        name: '噪声 (Noise)',
+                        line: {color: 'gray', width: 2, dash: 'dashdot'},
+                        xaxis: 'x2',
+                        yaxis: 'y2'
+                    },
+                    {
+                        x: learningCurveData.trainSizes,
+                        y: totalError,
+                        type: 'scatter',
+                        mode: 'lines',
+                        name: '总误差 (验证)',
+                        line: {color: 'black', width: 2, dash: 'solid'},
+                        xaxis: 'x2',
+                        yaxis: 'y2'
+                    }
+                ];
+                
+                const layout = {
+                    title: `学习曲线 (偏差-方差分解) - ${modelType}`,
+                    grid: {rows: 1, columns: 2, pattern: 'independent'},
+                    height: 500,
+                    hovermode: 'closest',
+                    annotations: [
+                        {
+                            text: '准确率曲线',
+                            x: 0.25, y: 0.95,
+                            xref: 'paper', yref: 'paper',
+                            showarrow: false,
+                            font: {size: 14, color: 'black'}
+                        },
+                        {
+                            text: '误差分解 (Error = Bias² + Variance + Noise)',
+                            x: 0.75, y: 0.95,
+                            xref: 'paper', yref: 'paper',
+                            showarrow: false,
+                            font: {size: 14, color: 'black'}
+                        }
+                    ],
+                    xaxis1: {title: '训练样本数'},
+                    yaxis1: {title: '准确率/Score', range: [0.5, 1.0]},
+                    xaxis2: {title: '训练样本数'},
+                    yaxis2: {title: '误差分量', range: [0, 0.3]}
+                };
+                
+                Plotly.newPlot('learningCurvePlot', [...accuracyTraces, ...errorTraces], layout).then(function() {
+                    updateDiagnosis(mode);
+                });
+            } else {
+                // 基础模式：显示准确率曲线
+                const traces = [
+                    {
+                        x: learningCurveData.trainSizes,
+                        y: learningCurveData.trainScores,
+                        type: 'scatter',
+                        mode: 'lines+markers',
+                        name: '训练集准确率',
+                        line: {color: 'blue', width: 3}
+                    },
+                    {
+                        x: learningCurveData.trainSizes,
+                        y: learningCurveData.valScores,
+                        type: 'scatter',
+                        mode: 'lines+markers',
+                        name: '验证集准确率',
+                        line: {color: 'red', width: 3}
+                    }
+                ];
+                
+                const layout = {
+                    title: `学习曲线 - ${modelType}`,
+                    xaxis: {title: '训练样本数'},
+                    yaxis: {title: '准确率/Score', range: [0.5, 1.0]},
+                    hovermode: 'closest'
+                };
+                
+                Plotly.newPlot('learningCurvePlot', traces, layout).then(function() {
+                    updateDiagnosis(mode);
+                });
+            }
+        }
+        
+        function updateDiagnosis(mode) {
+            const finalTrainScore = learningCurveData.trainScores[learningCurveData.trainScores.length - 1];
+            const finalValScore = learningCurveData.valScores[learningCurveData.valScores.length - 1];
+            const gap = finalTrainScore - finalValScore;
+            
+            let diagnosis, diagnosisClass;
+            if (gap > 0.1) {
+                diagnosis = '过拟合 (高方差) - 建议增加数据或正则化';
+                diagnosisClass = 'overfitting';
+            } else if (finalTrainScore < 0.7) {
+                diagnosis = '欠拟合 (高偏差) - 建议增加模型复杂度';
+                diagnosisClass = 'underfitting';
+            } else {
+                diagnosis = '拟合良好 - 模型状态良好';
+                diagnosisClass = 'goodfit';
+            }
+            
+            let additionalInfo = '';
+            if (mode === 'bias_variance' && learningCurveData.biasSquared) {
+                const finalBiasSquared = learningCurveData.biasSquared[learningCurveData.biasSquared.length - 1];
+                const finalVariance = learningCurveData.variance[learningCurveData.variance.length - 1];
+                const totalError = finalBiasSquared + finalVariance + learningCurveData.noise;
+                
+                additionalInfo = `
+                    <strong>误差分解:</strong><br>
+                    偏差²: ${finalBiasSquared.toFixed(4)}<br>
+                    方差: ${finalVariance.toFixed(4)}<br>
+                    噪声: ${learningCurveData.noise.toFixed(4)}<br>
+                    总误差: ${totalError.toFixed(4)}<br>
+                `;
+            }
+            
+            const diagnosisDiv = document.getElementById('learningCurveDiagnosis');
+            diagnosisDiv.innerHTML = `
+                <strong>诊断结果:</strong><br>
+                训练准确率: ${finalTrainScore.toFixed(3)}<br>
+                验证准确率: ${finalValScore.toFixed(3)}<br>
+                差距: ${gap.toFixed(3)}<br>
+                ${additionalInfo}
+                <div class="${diagnosisClass}">${diagnosis}</div>
+            `;
+        }
+        
+        // 更新ROC曲线
+        function updateROCCurve() {
+            const performance = parseInt(document.getElementById('thresholdSlider').value) / 100;
+            const workingThreshold = parseInt(document.getElementById('workingPointSlider').value) / 100;
+            
+            rocCurveData = generateROCData(performance);
+            
+            // 根据AUC值设置颜色
+            let curveColor;
+            if (rocCurveData.auc < 0.6) {
+                curveColor = 'red';
+            } else if (rocCurveData.auc < 0.8) {
+                curveColor = 'orange';
+            } else if (rocCurveData.auc < 0.9) {
+                curveColor = 'blue';
+            } else {
+                curveColor = 'green';
+            }
+            
+            const mainTrace = {
+                x: rocCurveData.fpr,
+                y: rocCurveData.tpr,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: `ROC (AUC = ${rocCurveData.auc.toFixed(3)})`,
+                line: {color: curveColor, width: 4},
+                marker: {size: 3, color: curveColor},
+                fill: 'tozeroy',
+                fillcolor: `rgba(${curveColor === 'red' ? '255,0,0' : curveColor === 'orange' ? '255,165,0' : curveColor === 'blue' ? '0,0,255' : '0,128,0'}, 0.1)`
+            };
+            
+            // 计算当前工作点
+            const workingIndex = Math.floor(workingThreshold * (rocCurveData.fpr.length - 1));
+            const workingFPR = rocCurveData.fpr[workingIndex];
+            const workingTPR = rocCurveData.tpr[workingIndex];
+            
+            const workingPoint = {
+                x: [workingFPR],
+                y: [workingTPR],
+                type: 'scatter',
+                mode: 'markers',
+                name: `当前工作点 (阈值=${workingThreshold.toFixed(2)})`,
+                marker: {color: 'black', size: 15, symbol: 'circle', line: {color: 'white', width: 2}}
+            };
+            
+            // 添加最佳工作点标记
+            const bestFPR = rocCurveData.fpr[rocCurveData.tpr.indexOf(Math.max(...rocCurveData.tpr))];
+            const bestTPR = rocCurveData.tpr[rocCurveData.tpr.indexOf(Math.max(...rocCurveData.tpr))];
+            
+            const optimalPoint = {
+                x: [bestFPR],
+                y: [bestTPR],
+                type: 'scatter',
+                mode: 'markers',
+                name: '最佳工作点',
+                marker: {color: 'red', size: 12, symbol: 'diamond'}
+            };
+            
+            const layout = {
+                title: {
+                    text: `ROC曲线分析 (性能等级: ${performance < 0.3 ? '差' : performance < 0.7 ? '中等' : '优秀'})`,
+                    font: {size: 16}
+                },
+                xaxis: {
+                    title: '假正例率 (FPR)',
+                    range: [0, 1],
+                    showgrid: true,
+                    gridcolor: 'lightgray'
+                },
+                yaxis: {
+                    title: '真正例率 (TPR)', 
+                    range: [0, 1],
+                    showgrid: true,
+                    gridcolor: 'lightgray'
+                },
+                hovermode: 'closest',
+                annotations: [
+                    {
+                        x: 0.5,
+                        y: 0.5,
+                        text: '随机分类器',
+                        showarrow: false,
+                        font: {color: 'gray', size: 12}
+                    },
+                    {
+                        x: workingFPR,
+                        y: workingTPR,
+                        text: `FPR: ${workingFPR.toFixed(3)}<br>TPR: ${workingTPR.toFixed(3)}`,
+                        showarrow: true,
+                        arrowhead: 2,
+                        arrowsize: 1,
+                        arrowwidth: 2,
+                        arrowcolor: 'black'
+                    }
+                ]
+            };
+            
+            Plotly.newPlot('rocCurvePlot', [mainTrace, workingPoint, optimalPoint], layout).then(function() {
+                // 添加随机分类器基准线
+                const baselineTrace = {
+                    x: [0, 1],
+                    y: [0, 1],
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: '随机分类器 (AUC = 0.5)',
+                    line: {color: 'gray', width: 2, dash: 'dot'}
+                };
+                
+                Plotly.addTraces('rocCurvePlot', [baselineTrace]).then(function() {
+                    // 更新AUC信息和性能评价
+                    let performance;
+                    if (rocCurveData.auc < 0.6) {
+                        performance = '差分类器';
+                    } else if (rocCurveData.auc < 0.7) {
+                        performance = '一般分类器';
+                    } else if (rocCurveData.auc < 0.8) {
+                        performance = '良好分类器';
+                    } else if (rocCurveData.auc < 0.9) {
+                        performance = '优秀分类器';
+                    } else {
+                        performance = '卓越分类器';
+                    }
+                    
+                    document.getElementById('aucValue').innerHTML = 
+                        `${rocCurveData.auc.toFixed(3)} <span style="color: ${curveColor}; font-weight: bold;">(${performance})</span>`;
+                });
+            });
+        }
+        
+        // 更新验证曲线
+        function updateValidationCurve() {
+            const paramType = document.getElementById('paramType').value;
+            const scaleType = document.getElementById('scaleType').value;
+            
+            validationCurveData = generateValidationData(paramType);
+            
+            const trace1 = {
+                x: validationCurveData.paramRange,
+                y: validationCurveData.trainScores,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: '训练集准确率',
+                line: {color: 'blue', width: 3}
+            };
+            
+            const trace2 = {
+                x: validationCurveData.paramRange,
+                y: validationCurveData.valScores,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: '验证集准确率',
+                line: {color: 'red', width: 3}
+            };
+            
+            // 根据参数类型和刻度类型设置布局
+            let xaxisConfig = {
+                title: '参数值',
+                type: scaleType === 'log' ? 'log' : 'linear'
+            };
+            
+            // 对于对数刻度，确保所有值都为正数
+            if (scaleType === 'log') {
+                xaxisConfig.range = [
+                    Math.log10(Math.min(...validationCurveData.paramRange) * 0.8),
+                    Math.log10(Math.max(...validationCurveData.paramRange) * 1.2)
+                ];
+            }
+            
+            const layout = {
+                title: `验证曲线 - ${paramType} (${scaleType === 'log' ? '对数刻度' : '线性刻度'})`,
+                xaxis: xaxisConfig,
+                yaxis: {
+                    title: '准确率/Score', 
+                    range: [0.5, 1.0]
+                },
+                hovermode: 'closest'
+            };
+            
+            Plotly.newPlot('validationCurvePlot', [trace1, trace2], layout).then(function() {
+                // 找到最佳参数
+                const maxScore = Math.max(...validationCurveData.valScores);
+                const bestParam = validationCurveData.paramRange[validationCurveData.valScores.indexOf(maxScore)];
+                
+                // 根据参数类型格式化显示
+                let formattedParam;
+                if (paramType === 'c' || paramType === 'learning_rate' || paramType === 'alpha') {
+                    formattedParam = bestParam.toExponential(2);
+                } else {
+                    formattedParam = bestParam.toFixed(1);
+                }
+                
+                document.getElementById('bestParam').textContent = `${formattedParam}`;
+            });
+        }
+        
+        // 更新参考学习曲线
+        function updateReferenceCurves() {
+            const mode = document.getElementById('curveModeSelect').value;
+            const data = generateReferenceLearningData(mode);
+            
+            if (mode === 'bias_variance_demo') {
+                // 偏差-方差分解演示：双子图布局
+                const accuracyTraces = [
+                    {
+                        x: data.trainSizes,
+                        y: data.trainScores,
+                        type: 'scatter',
+                        mode: 'lines+markers',
+                        name: '训练集准确率',
+                        line: {color: 'blue', width: 3},
+                        xaxis: 'x1',
+                        yaxis: 'y1'
+                    },
+                    {
+                        x: data.trainSizes,
+                        y: data.valScores,
+                        type: 'scatter',
+                        mode: 'lines+markers',
+                        name: '验证集准确率',
+                        line: {color: 'red', width: 3},
+                        xaxis: 'x1',
+                        yaxis: 'y1'
+                    }
+                ];
+                
+                // 计算总误差验证
+                const totalError = data.biasSquared.map((bias, i) => 
+                    bias + data.variance[i] + data.noise
+                );
+                
+                const errorTraces = [
+                    {
+                        x: data.trainSizes,
+                        y: data.biasSquared,
+                        type: 'scatter',
+                        mode: 'lines+markers',
+                        name: '偏差² (Bias²)',
+                        line: {color: 'orange', width: 3},
+                        xaxis: 'x2',
+                        yaxis: 'y2'
+                    },
+                    {
+                        x: data.trainSizes,
+                        y: data.variance,
+                        type: 'scatter',
+                        mode: 'lines+markers',
+                        name: '方差 (Variance)',
+                        line: {color: 'purple', width: 3},
+                        xaxis: 'x2',
+                        yaxis: 'y2'
+                    },
+                    {
+                        x: data.trainSizes,
+                        y: data.trainSizes.map(() => data.noise),
+                        type: 'scatter',
+                        mode: 'lines',
+                        name: '噪声 (Noise)',
+                        line: {color: 'gray', width: 2, dash: 'dashdot'},
+                        xaxis: 'x2',
+                        yaxis: 'y2'
+                    },
+                    {
+                        x: data.trainSizes,
+                        y: totalError,
+                        type: 'scatter',
+                        mode: 'lines',
+                        name: '总误差 (验证)',
+                        line: {color: 'black', width: 2, dash: 'solid'},
+                        xaxis: 'x2',
+                        yaxis: 'y2'
+                    }
+                ];
+                
+                const layout = {
+                    title: '偏差-方差分解演示',
+                    grid: {rows: 1, columns: 2, pattern: 'independent'},
+                    height: 500,
+                    hovermode: 'closest',
+                    annotations: [
+                        {
+                            text: '准确率曲线',
+                            x: 0.25, y: 0.95,
+                            xref: 'paper', yref: 'paper',
+                            showarrow: false,
+                            font: {size: 14, color: 'black'}
+                        },
+                        {
+                            text: '误差分解 (Error = Bias² + Variance + Noise)',
+                            x: 0.75, y: 0.95,
+                            xref: 'paper', yref: 'paper',
+                            showarrow: false,
+                            font: {size: 14, color: 'black'}
+                        }
+                    ],
+                    xaxis1: {title: '训练样本数'},
+                    yaxis1: {title: '准确率/Score', range: [0.5, 1.0]},
+                    xaxis2: {title: '训练样本数'},
+                    yaxis2: {title: '误差分量', range: [0, 0.2]}
+                };
+                
+                Plotly.newPlot('referenceCurvePlot', [...accuracyTraces, ...errorTraces], layout);
+            } else {
+                // 其他模式：单图显示
+                const traces = [];
+                const layout = {
+                    title: `典型学习曲线 - ${mode === 'underfitting' ? '欠拟合' : mode === 'overfitting' ? '过拟合' : mode === 'goodfit' ? '理想拟合' : '三种模式对比'}`,
+                    xaxis: {title: '训练样本数', range: [0, 1050]},
+                    yaxis: {title: '准确率/Score', range: [0.4, 1.0]},
+                    hovermode: 'closest',
+                    legend: {x: 0.02, y: 0.98}
+                };
+                
+                if (mode === 'comparison') {
+                    // 对比模式：显示所有三种
+                    data.datasets.forEach(dataset => {
+                        traces.push({
+                            x: data.trainSizes,
+                            y: dataset.trainScores,
+                            type: 'scatter',
+                            mode: 'lines+markers',
+                            name: `${dataset.name} - 训练集`,
+                            line: {color: dataset.color, width: 3},
+                            marker: {size: 4}
+                        });
+                        traces.push({
+                            x: data.trainSizes,
+                            y: dataset.valScores,
+                            type: 'scatter',
+                            mode: 'lines+markers',
+                            name: `${dataset.name} - 验证集`,
+                            line: {color: dataset.color, width: 3, dash: 'dot'},
+                            marker: {size: 4}
+                        });
+                    });
+                } else {
+                    // 单一模式
+                    traces.push({
+                        x: data.trainSizes,
+                        y: data.trainScores,
+                        type: 'scatter',
+                        mode: 'lines+markers',
+                        name: '训练集准确率',
+                        line: {color: 'blue', width: 3},
+                        marker: {size: 4}
+                    });
+                    traces.push({
+                        x: data.trainSizes,
+                        y: data.valScores,
+                        type: 'scatter',
+                        mode: 'lines+markers',
+                        name: '验证集准确率',
+                        line: {color: 'red', width: 3, dash: 'dot'},
+                        marker: {size: 4}
+                    });
+                }
+                
+                Plotly.newPlot('referenceCurvePlot', traces, layout);
+            }
+            
+            // 更新描述
+            document.getElementById('modeDescription').innerHTML = data.modeDescription;
+        }
+        
+        // 参考曲线动画
+        function animateReferenceCurves() {
+            const modes = ['underfitting', 'overfitting', 'goodfit'];
+            let currentMode = 0;
+            
+            const animationInterval = setInterval(() => {
+                if (currentMode >= modes.length) {
+                    clearInterval(animationInterval);
+                    // 最后显示对比模式
+                    document.getElementById('curveModeSelect').value = 'comparison';
+                    updateReferenceCurves();
+                    return;
+                }
+                
+                document.getElementById('curveModeSelect').value = modes[currentMode];
+                updateReferenceCurves();
+                currentMode++;
+            }, 2000);
+        }
+        
+        // 开始训练
+        let trainingStep = 0;
+        const maxEpochs = 100;
+        
+        function startTraining() {
+            if (trainingInterval) return;
+            
+            const learningRate = parseInt(document.getElementById('learningRateSlider').value) / 1000;
+            const regularization = parseInt(document.getElementById('regularizationSlider').value) / 100;
+            
+            lossCurveData = generateLossData(learningRate, regularization);
+            trainingStep = 0;
+            
+            trainingInterval = setInterval(() => {
+                if (trainingStep < maxEpochs) {
+                    updateLossCurve(trainingStep);
+                    trainingStep++;
+                } else {
+                    stopTraining();
+                }
+            }, 100);
+            
+            document.getElementById('trainingStatus').innerHTML = '状态: 训练中...';
+        }
+        
+        function stopTraining() {
+            if (trainingInterval) {
+                clearInterval(trainingInterval);
+                trainingInterval = null;
+                document.getElementById('trainingStatus').innerHTML = '状态: 训练已停止';
+            }
+        }
+        
+        function startEarlyStopping() {
+            if (trainingInterval) return;
+            
+            const learningRate = parseInt(document.getElementById('learningRateSlider').value) / 1000;
+            const regularization = parseInt(document.getElementById('regularizationSlider').value) / 100;
+            
+            lossCurveData = generateLossData(learningRate, regularization);
+            trainingStep = 0;
+            
+            let bestValLoss = Infinity;
+            let patience = 10; // 早停耐心值
+            let patienceCounter = 0;
+            let earlyStopEpoch = -1;
+            
+            trainingInterval = setInterval(() => {
+                if (trainingStep >= maxEpochs) {
+                    stopTraining();
+                    return;
+                }
+                
+                updateLossCurve(trainingStep);
+                
+                // 检查是否需要早停
+                const currentValLoss = lossCurveData.valLosses[trainingStep];
+                if (currentValLoss < bestValLoss) {
+                    bestValLoss = currentValLoss;
+                    patienceCounter = 0;
+                } else {
+                    patienceCounter++;
+                    if (patienceCounter >= patience && earlyStopEpoch === -1) {
+                        earlyStopEpoch = trainingStep;
+                        stopTraining();
+                        
+                        // 标记早停点
+                        const earlyStopTrace = {
+                            x: [earlyStopEpoch, earlyStopEpoch],
+                            y: [0, 12],
+                            type: 'scatter',
+                            mode: 'lines',
+                            name: '早停点',
+                            line: {color: 'red', width: 3, dash: 'dash'},
+                            showlegend: true
+                        };
+                        
+                        Plotly.addTraces('lossCurvePlot', [earlyStopTrace]).then(function() {
+                            document.getElementById('trainingStatus').innerHTML = 
+                                `状态: 早停于Epoch ${earlyStopEpoch} (验证损失开始上升)`;
+                        });
+                        return;
+                    }
+                }
+                
+                trainingStep++;
+            }, 50);
+            
+            document.getElementById('trainingStatus').innerHTML = '状态: 早停训练中...';
+        }
+        
+        function resetTraining() {
+            stopTraining();
+            trainingStep = 0;
+            
+            if (lossCurveData) {
+                updateLossCurve(0);
+            }
+            
+            document.getElementById('trainingStatus').innerHTML = '状态: 未开始训练';
+        }
+        
+        function updateLossCurve(currentStep) {
+            if (!lossCurveData) return;
+            
+            const trace1 = {
+                x: lossCurveData.epochs.slice(0, currentStep + 1),
+                y: lossCurveData.trainLosses.slice(0, currentStep + 1),
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: '训练损失',
+                line: {color: 'blue', width: 3}
+            };
+            
+            const trace2 = {
+                x: lossCurveData.epochs.slice(0, currentStep + 1),
+                y: lossCurveData.valLosses.slice(0, currentStep + 1),
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: '验证损失',
+                line: {color: 'red', width: 3}
+            };
+            
+            const layout = {
+                title: `训练损失曲线 - Epoch ${currentStep}`,
+                xaxis: {title: 'Epoch'},
+                yaxis: {title: 'Loss', range: [0, 12]},
+                hovermode: 'closest'
+            };
+            
+            Plotly.newPlot('lossCurvePlot', [trace1, trace2], layout);
+            
+            // 标记最佳点
+            if (currentStep > 0) {
+                const bestEpoch = lossCurveData.epochs.indexOf(Math.min(...lossCurveData.valLosses));
+                const bestLoss = Math.min(...lossCurveData.valLosses);
+                
+                const bestTrace = {
+                    x: [bestEpoch, bestEpoch],
+                    y: [0, bestLoss],
+                    type: 'scatter',
+                    mode: 'markers',
+                    marker: {color: 'green', size: 10},
+                    name: '最佳停止点'
+                };
+                
+                Plotly.addTraces('lossCurvePlot', [bestTrace]);
+            }
+        }
+        
+        // 更新仪表板
+        function updateDashboard() {
+            dashboardData = generateDashboardData();
+            
+            // 创建2x3子图
+            const traces = [];
+            
+            // 1. 学习曲线
+            traces.push({
+                x: dashboardData.learningCurve.trainSizes,
+                y: dashboardData.learningCurve.trainScores,
+                type: 'scatter',
+                mode: 'lines+markers',
+                xaxis: 'x1',
+                yaxis: 'y1',
+                name: '训练集准确率',
+                line: {color: 'blue', width: 3}
+            });
+            
+            traces.push({
+                x: dashboardData.learningCurve.trainSizes,
+                y: dashboardData.learningCurve.valScores,
+                type: 'scatter',
+                mode: 'lines+markers',
+                xaxis: 'x1',
+                yaxis: 'y1',
+                name: '验证集准确率',
+                line: {color: 'red', width: 3},
+                showlegend: false
+            });
+            
+            // 2. ROC曲线
+            traces.push({
+                x: dashboardData.rocCurve.fpr,
+                y: dashboardData.rocCurve.tpr,
+                type: 'scatter',
+                mode: 'lines',
+                xaxis: 'x2',
+                yaxis: 'y2',
+                name: 'ROC曲线',
+                line: {color: 'green', width: 3},
+                fill: 'tozeroy'
+            });
+            
+            // 3. 特征重要性
+            traces.push({
+                x: dashboardData.featureImportance.map(f => f.importance),
+                y: dashboardData.featureImportance.map(f => f.feature),
+                type: 'bar',
+                xaxis: 'x3',
+                yaxis: 'y3',
+                name: '特征重要性',
+                orientation: 'h',
+                marker: {color: 'purple'}
+            });
+            
+            // 4. 模型对比
+            traces.push({
+                x: dashboardData.modelComparison.map(m => m.model),
+                y: dashboardData.modelComparison.map(m => m.score),
+                type: 'bar',
+                xaxis: 'x4',
+                yaxis: 'y4',
+                name: '模型性能对比',
+                marker: {color: 'orange'}
+            });
+            
+            // 5. 混淆矩阵
+            const cm = dashboardData.confusionMatrix;
+            
+            traces.push({
+                z: cm, // 直接使用2D数组
+                x: ['类别0', '类别1', '类别2', '类别3'],
+                y: ['类别0', '类别1', '类别2', '类别3'],
+                text: cm.map(row => row.map(val => val.toString())),
+                texttemplate: "%{text}",
+                textfont: {color: "black"},
+                type: 'heatmap',
+                xaxis: 'x5',
+                yaxis: 'y5',
+                name: '混淆矩阵',
+                colorscale: 'Blues',
+                showscale: true,
+                colorbar: {x: 1.02, y: 0.5}
+            });
+            
+            const layout = {
+                title: {
+                    text: '机器学习综合分析仪表板',
+                    font: {size: 20}
+                },
+                grid: {
+                    rows: 2, 
+                    columns: 3, 
+                    pattern: 'independent',
+                    subplot_titles: [
+                        '学习曲线分析',
+                        'ROC曲线性能',
+                        '特征重要性排名',
+                        '模型性能对比',
+                        '混淆矩阵热力图',
+                        ''
+                    ]
+                },
+                height: 900,
+                hovermode: 'closest',
+                
+                // 子图标题样式
+                annotations: [
+                    {
+                        text: '学习曲线分析',
+                        x: 0.17, y: 0.98,
+                        xref: 'paper', yref: 'paper',
+                        showarrow: false,
+                        font: {size: 14, color: 'black'}
+                    },
+                    {
+                        text: 'ROC曲线性能',
+                        x: 0.5, y: 0.98,
+                        xref: 'paper', yref: 'paper',
+                        showarrow: false,
+                        font: {size: 14, color: 'black'}
+                    },
+                    {
+                        text: '特征重要性排名',
+                        x: 0.83, y: 0.98,
+                        xref: 'paper', yref: 'paper',
+                        showarrow: false,
+                        font: {size: 14, color: 'black'}
+                    },
+                    {
+                        text: '模型性能对比',
+                        x: 0.17, y: 0.48,
+                        xref: 'paper', yref: 'paper',
+                        showarrow: false,
+                        font: {size: 14, color: 'black'}
+                    },
+                    {
+                        text: '混淆矩阵热力图',
+                        x: 0.5, y: 0.48,
+                        xref: 'paper', yref: 'paper',
+                        showarrow: false,
+                        font: {size: 14, color: 'black'}
+                    }
+                ],
+                
+                // 各子图的轴标签
+                xaxis1: {title: '训练样本数'},
+                yaxis1: {title: '准确率/Score', range: [0.5, 1.0]},
+                
+                xaxis2: {title: '假正例率 (FPR)'},
+                yaxis2: {title: '真正例率 (TPR)'},
+                
+                xaxis3: {title: '重要性分数'},
+                yaxis3: {title: '特征名称'},
+                
+                xaxis4: {title: '模型类型'},
+                yaxis4: {title: '性能得分', range: [0.7, 0.9]},
+                
+                xaxis5: {title: '预测类别'},
+                yaxis5: {title: '真实类别'},
+                
+                xaxis6: {visible: false},
+                yaxis6: {visible: false}
+            };
+            
+            Plotly.newPlot('dashboardPlot', traces, layout);
+        }
+        
+        // 动画函数
+        function animateLearningCurve() {
+            if (!learningCurveData) return;
+            
+            const frames = [];
+            const nFrames = 50;
+            
+            for (let i = 0; i < nFrames; i++) {
+                const progress = i / nFrames;
+                const currentSize = Math.floor(progress * learningCurveData.trainSizes.length);
+                
+                frames.push({
+                    name: `frame${i}`,
+                    data: [
+                        {
+                            x: learningCurveData.trainSizes.slice(0, currentSize + 1),
+                            y: learningCurveData.trainScores.slice(0, currentSize + 1),
+                            type: 'scatter',
+                            mode: 'lines+markers',
+                            name: '训练集',
+                            line: {color: 'blue', width: 3}
+                        },
+                        {
+                            x: learningCurveData.trainSizes.slice(0, currentSize + 1),
+                            y: learningCurveData.valScores.slice(0, currentSize + 1),
+                            type: 'scatter',
+                            mode: 'lines+markers',
+                            name: '验证集',
+                            line: {color: 'red', width: 3}
+                        }
+                    ]
+                });
+            }
+            
+            Plotly.addFrames('learningCurvePlot', frames).then(function() {
+                Plotly.animate('learningCurvePlot', ['frame0', `frame${nFrames-1}`], {
+                    transition: {
+                        duration: 2000,
+                        easing: 'cubic-in-out'
+                    }
+                });
+            });
+        }
+        
+        function animateROCCurve() {
+            if (!rocCurveData) return;
+            
+            const frames = [];
+            const nFrames = 30; // 减少帧数，让动画更流畅
+            
+            // 创建阈值变化的动画
+            for (let i = 0; i < nFrames; i++) {
+                const threshold = i / (nFrames - 1); // 0到1的阈值
+                const tempROCData = generateROCData(threshold * 100);
+                
+                // 根据AUC值设置颜色
+                let curveColor;
+                if (tempROCData.auc < 0.6) {
+                    curveColor = 'red';
+                } else if (tempROCData.auc < 0.8) {
+                    curveColor = 'orange';
+                } else if (tempROCData.auc < 0.9) {
+                    curveColor = 'blue';
+                } else {
+                    curveColor = 'green';
+                }
+                
+                frames.push({
+                    name: `frame${i}`,
+                    data: [
+                        {
+                            x: tempROCData.fpr,
+                            y: tempROCData.tpr,
+                            type: 'scatter',
+                            mode: 'lines+markers',
+                            name: `ROC (AUC = ${tempROCData.auc.toFixed(3)})`,
+                            line: {color: curveColor, width: 4},
+                            marker: {size: 3, color: curveColor},
+                            fill: 'tozeroy',
+                            fillcolor: `rgba(${curveColor === 'red' ? '255,0,0' : curveColor === 'orange' ? '255,165,0' : curveColor === 'blue' ? '0,0,255' : '0,128,0'}, 0.1)`
+                        },
+                        {
+                            x: [0, 1],
+                            y: [0, 1],
+                            type: 'scatter',
+                            mode: 'lines',
+                            name: '随机分类器 (AUC = 0.5)',
+                            line: {color: 'gray', width: 2, dash: 'dot'},
+                            showlegend: i === 0 // 只在第一帧显示图例
+                        }
+                    ]
+                });
+            }
+            
+            Plotly.addFrames('rocCurvePlot', frames).then(function() {
+                // 更新滑块位置并显示动画
+                let currentFrame = 0;
+                const animationInterval = setInterval(() => {
+                    if (currentFrame >= nFrames) {
+                        clearInterval(animationInterval);
+                        return;
+                    }
+                    
+                    // 更新滑块值
+                    const thresholdValue = (currentFrame / (nFrames - 1)) * 100;
+                    document.getElementById('thresholdSlider').value = thresholdValue;
+                    document.getElementById('thresholdValue').textContent = (thresholdValue / 100).toFixed(2);
+                    
+                    currentFrame++;
+                }, 2000 / nFrames);
+                
+                Plotly.animate('rocCurvePlot', ['frame0', `frame${nFrames-1}`], {
+                    transition: {
+                        duration: 2000,
+                        easing: 'cubic-in-out'
+                    },
+                    frame: {
+                        duration: 2000 / nFrames,
+                        redraw: true
+                    }
+                });
+            });
+        }
+        
+        function animateValidationCurve() {
+            if (!validationCurveData) return;
+            
+            const frames = [];
+            const nFrames = 50;
+            
+            for (let i = 0; i < nFrames; i++) {
+                const progress = i / nFrames;
+                const currentIndex = Math.floor(progress * validationCurveData.paramRange.length);
+                
+                frames.push({
+                    name: `frame${i}`,
+                    data: [
+                        {
+                            x: validationCurveData.paramRange.slice(0, currentIndex + 1),
+                            y: validationCurveData.trainScores.slice(0, currentIndex + 1),
+                            type: 'scatter',
+                            mode: 'lines+markers',
+                            name: '训练集',
+                            line: {color: 'blue', width: 3}
+                        },
+                        {
+                            x: validationCurveData.paramRange.slice(0, currentIndex + 1),
+                            y: validationCurveData.valScores.slice(0, currentIndex + 1),
+                            type: 'scatter',
+                            mode: 'lines+markers',
+                            name: '验证集',
+                            line: {color: 'red', width: 3}
+                        }
+                    ]
+                });
+            }
+            
+            Plotly.addFrames('validationCurvePlot', frames).then(function() {
+                Plotly.animate('validationCurvePlot', ['frame0', `frame${nFrames-1}`], {
+                    transition: {
+                        duration: 2000,
+                        easing: 'cubic-in-out'
+                    }
+                });
+            });
+        }
+        
+        function animateLossCurve() {
+            if (!lossCurveData) return;
+            
+            const frames = [];
+            const nFrames = 100;
+            
+            for (let i = 0; i < nFrames; i++) {
+                frames.push({
+                    name: `frame${i}`,
+                    data: [
+                        {
+                            x: lossCurveData.epochs.slice(0, i + 1),
+                            y: lossCurveData.trainLosses.slice(0, i + 1),
+                            type: 'scatter',
+                            mode: 'lines+markers',
+                            name: '训练损失',
+                            line: {color: 'blue', width: 3}
+                        },
+                        {
+                            x: lossCurveData.epochs.slice(0, i + 1),
+                            y: lossCurveData.valLosses.slice(0, i + 1),
+                            type: 'scatter',
+                            mode: 'lines+markers',
+                            name: '验证损失',
+                            line: {color: 'red', width: 3}
+                        }
+                    ]
+                });
+            }
+            
+            Plotly.addFrames('lossCurvePlot', frames).then(function() {
+                Plotly.animate('lossCurvePlot', ['frame0', `frame${nFrames-1}`], {
+                    transition: {
+                        duration: 3000,
+                        easing: 'cubic-in-out'
+                    }
+                });
+            });
+        }
+        
+        function animateDashboard() {
+            // 先更新仪表板
+            updateDashboard();
+            
+            // 为每个子图添加渐进式动画效果
+            setTimeout(() => {
+                // 1. 动画学习曲线
+                const learningData = dashboardData.learningCurve;
+                const learningFrames = [];
+                for (let i = 1; i <= learningData.trainSizes.length; i++) {
+                    learningFrames.push({
+                        name: `learning_frame${i}`,
+                        data: [
+                            {
+                                x: learningData.trainSizes.slice(0, i),
+                                y: learningData.trainScores.slice(0, i),
+                                type: 'scatter',
+                                mode: 'lines+markers',
+                                name: '训练集准确率',
+                                line: {color: 'blue', width: 3},
+                                xaxis: 'x1',
+                                yaxis: 'y1'
+                            },
+                            {
+                                x: learningData.trainSizes.slice(0, i),
+                                y: learningData.valScores.slice(0, i),
+                                type: 'scatter',
+                                mode: 'lines+markers',
+                                name: '验证集准确率',
+                                line: {color: 'red', width: 3},
+                                xaxis: 'x1',
+                                yaxis: 'y1'
+                            }
+                        ]
+                    });
+                }
+                Plotly.addFrames('dashboardPlot', learningFrames);
+                Plotly.animate('dashboardPlot', ['learning_frame1', `learning_frame${learningData.trainSizes.length}`], {
+                    transition: {duration: 1500, easing: 'cubic-in-out'},
+                    frame: {duration: 1500 / learningData.trainSizes.length}
+                });
+            }, 500);
+            
+            // 2. 动画ROC曲线
+            setTimeout(() => {
+                const rocData = dashboardData.rocCurve;
+                const rocFrames = [];
+                for (let i = 1; i <= rocData.fpr.length; i += 2) {
+                    rocFrames.push({
+                        name: `roc_frame${i}`,
+                        data: [{
+                            x: rocData.fpr.slice(0, i),
+                            y: rocData.tpr.slice(0, i),
+                            type: 'scatter',
+                            mode: 'lines',
+                            name: 'ROC曲线',
+                            line: {color: 'green', width: 3},
+                            xaxis: 'x2',
+                            yaxis: 'y2',
+                            fill: 'tozeroy'
+                        }]
+                    });
+                }
+                Plotly.addFrames('dashboardPlot', rocFrames);
+                Plotly.animate('dashboardPlot', ['roc_frame1', `roc_frame${rocFrames.length}`], {
+                    transition: {duration: 1500, easing: 'cubic-in-out'},
+                    frame: {duration: 1500 / rocFrames.length}
+                });
+            }, 2000);
+            
+            // 3. 动画特征重要性
+            setTimeout(() => {
+                const features = dashboardData.featureImportance;
+                const featureFrames = [];
+                for (let i = 1; i <= features.length; i++) {
+                    featureFrames.push({
+                        name: `feature_frame${i}`,
+                        data: [{
+                            x: features.slice(0, i).map(f => f.importance),
+                            y: features.slice(0, i).map(f => f.feature),
+                            type: 'bar',
+                            name: '特征重要性',
+                            marker: {color: 'purple'},
+                            xaxis: 'x3',
+                            yaxis: 'y3',
+                            orientation: 'h'
+                        }]
+                    });
+                }
+                Plotly.addFrames('dashboardPlot', featureFrames);
+                Plotly.animate('dashboardPlot', ['feature_frame1', `feature_frame${features.length}`], {
+                    transition: {duration: 1500, easing: 'cubic-in-out'},
+                    frame: {duration: 1500 / features.length}
+                });
+            }, 3500);
+        }
+        
+        // 事件监听器
+        document.getElementById('trainSizeSlider').addEventListener('input', function() {
+            document.getElementById('trainSizeValue').textContent = this.value + '%';
+        });
+        
+        document.getElementById('thresholdSlider').addEventListener('input', function() {
+            const value = parseInt(this.value);
+            if (value < 30) {
+                document.getElementById('thresholdValue').textContent = '差';
+            } else if (value < 70) {
+                document.getElementById('thresholdValue').textContent = '中等';
+            } else {
+                document.getElementById('thresholdValue').textContent = '优秀';
+            }
+            updateROCCurve(); // 实时更新ROC曲线
+        });
+        
+        document.getElementById('workingPointSlider').addEventListener('input', function() {
+            document.getElementById('workingPointValue').textContent = (this.value / 100).toFixed(2);
+            updateROCCurve(); // 实时更新工作点
+        });
+        
+        document.getElementById('learningRateSlider').addEventListener('input', function() {
+            document.getElementById('learningRateValue').textContent = '0.0' + (this.value / 1000).toFixed(3);
+        });
+        
+        document.getElementById('regularizationSlider').addEventListener('input', function() {
+            document.getElementById('regularizationValue').textContent = '0.0' + (this.value / 100).toFixed(2);
+        });
+        
+        // 初始化
+        window.onload = function() {
+            updateLearningCurve();
+            updateROCCurve();
+            updateValidationCurve();
+            updateDashboard();
+            updateReferenceCurves(); // 初始化参考学习曲线
+        };
+    </script>
+</body>
+</html>
