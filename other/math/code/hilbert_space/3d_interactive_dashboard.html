@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>希尔伯特空间3D/高维交互式可视化</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        .subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 40px;
+            font-size: 1.2em;
+        }
+        .dimension-toggle {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .dimension-button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            margin: 0 10px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        .dimension-button:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+        }
+        .dimension-button.active {
+            background-color: #e74c3c;
+        }
+        .section {
+            margin-bottom: 50px;
+            padding: 25px;
+            border: 2px solid #e8f4f8;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        .section h2 {
+            color: #34495e;
+            margin-top: 0;
+            font-size: 1.8em;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .math-formula {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 5px solid #3498db;
+            font-family: 'Courier New', monospace;
+            font-size: 1.1em;
+            overflow-x: auto;
+        }
+        .insight-box {
+            background-color: #e8f5e8;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 5px solid #27ae60;
+        }
+        .warning-box {
+            background-color: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 5px solid #f39c12;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #bdc3c7;
+            flex-wrap: wrap;
+        }
+        .tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            background-color: #ecf0f1;
+            border: 1px solid #bdc3c7;
+            border-bottom: none;
+            margin-right: 5px;
+            margin-bottom: 5px;
+            border-radius: 8px 8px 0 0;
+            transition: all 0.3s ease;
+        }
+        .tab:hover {
+            background-color: #d5dbdb;
+        }
+        .tab.active {
+            background-color: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+        .tab-content {
+            display: none;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .plot-container {
+            width: 100%;
+            height: 600px;
+            margin: 20px 0;
+        }
+        .plot-container-2d {
+            width: 100%;
+            height: 500px;
+            margin: 20px 0;
+        }
+        .controls {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        .button:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .slider-container {
+            display: inline-block;
+            margin: 10px 20px;
+        }
+        .slider {
+            width: 200px;
+            vertical-align: middle;
+        }
+        .nav-buttons {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .nav-button {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            margin: 0 10px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        .nav-button:hover {
+            background-color: #c0392b;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+        }
+        .toc {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .toc h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        .toc ul {
+            list-style-type: none;
+            padding-left: 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 10px;
+        }
+        .toc li {
+            margin: 8px 0;
+            padding: 5px 10px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+        .toc li:hover {
+            background-color: #dee2e6;
+            transform: translateX(5px);
+        }
+        .toc a {
+            text-decoration: none;
+            color: #495057;
+            font-weight: 500;
+        }
+        .dimension-indicator {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .dim-2d {
+            background-color: #3498db;
+            color: white;
+        }
+        .dim-3d {
+            background-color: #e74c3c;
+            color: white;
+        }
+        .dim-high {
+            background-color: #f39c12;
+            color: white;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        @media (max-width: 1200px) {
+            .grid-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 希尔伯特空间3D/高维可视化</h1>
+        <p class="subtitle">从2D到多维：探索希尔伯特空间的真实维度</p>
+        
+        <!-- 维度切换按钮 -->
+        <div class="dimension-toggle">
+            <button class="dimension-button active" onclick="toggleDimension('2d')">2D可视化</button>
+            <button class="dimension-button" onclick="toggleDimension('3d')">3D可视化</button>
+            <button class="dimension-button" onclick="toggleDimension('high')">高维可视化</button>
+            <button class="dimension-button" onclick="toggleDimension('all')">全部显示</button>
+        </div>
+        
+        <!-- 目录 -->
+        <div class="toc">
+            <h3>📚 目录 Table of Contents</h3>
+            <ul>
+                <li><a href="#section1">1️⃣ 希尔伯特空间内积 <span class="dimension-indicator dim-2d">2D</span><span class="dimension-indicator dim-3d">3D</span></a></li>
+                <li><a href="#section2">2️⃣ 傅里叶变换酉算子 <span class="dimension-indicator dim-2d">2D</span><span class="dimension-indicator dim-high">高维</span></a></li>
+                <li><a href="#section3">3️⃣ 卷积定理演示 <span class="dimension-indicator dim-2d">2D</span></a></li>
+                <li><a href="#section4">4️⃣ CNN滤波器频域特性 <span class="dimension-indicator dim-2d">2D</span></a></li>
+                <li><a href="#section5">5️⃣ 图傅里叶变换 <span class="dimension-indicator dim-2d">2D</span></a></li>
+                <li><a href="#section6">6️⃣ Transformer位置编码 <span class="dimension-indicator dim-2d">2D</span></a></li>
+                <li><a href="#section7">7️⃣ 流形学习 <span class="dimension-indicator dim-3d">3D</span><span class="dimension-indicator dim-high">高维</span></a></li>
+                <li><a href="#section8">8️⃣ 神经网络权重空间 <span class="dimension-indicator dim-3d">3D</span><span class="dimension-indicator dim-high">高维</span></a></li>
+                <li><a href="#section9">9️⃣ 多维傅里叶级数 <span class="dimension-indicator dim-3d">3D</span><span class="dimension-indicator dim-high">高维</span></a></li>
+                <li><a href="#section10">🔟 高维分类边界 <span class="dimension-indicator dim-3d">3D</span><span class="dimension-indicator dim-high">高维</span></a></li>
+            </ul>
+        </div>
+        
+        <!-- 第1节：希尔伯特空间内积 -->
+        <div class="section" id="section1">
+            <h2>1️⃣ 希尔伯特空间内积几何意义</h2>
+            
+            <div class="math-formula">
+                <strong>内积定义：</strong> ⟨v₁, v₂⟩ = ||v₁|| · ||v₂|| · cos(θ)
+            </div>
+            
+            <div class="insight-box">
+                <strong>💡 核心洞察：</strong>
+                从2D到3D，内积的几何意义保持不变：一个向量在另一个向量上的投影。
+                在高维空间中，这个概念推广到任意维度。
+            </div>
+            
+            <div class="tabs">
+                <div class="tab active" onclick="showTab(event, 'inner-2d')">2D几何直观</div>
+                <div class="tab" onclick="showTab(event, 'inner-3d')">3D空间展示</div>
+                <div class="tab" onclick="showTab(event, 'inner-high')">高维推广</div>
+                <div class="tab" onclick="showTab(event, 'inner-calc')">交互计算</div>
+            </div>
+            
+            <div id="inner-2d" class="tab-content active">
+                <div id="innerProduct2DPlot" class="plot-container-2d"></div>
+            </div>
+            
+            <div id="inner-3d" class="tab-content">
+                <div id="innerProduct3DPlot" class="plot-container"></div>
+            </div>
+            
+            <div id="inner-high" class="tab-content">
+                <div class="math-formula">
+                    <strong>高维内积：</strong><br>
+                    设 x, y ∈ ℝⁿ，则内积为：<br>
+                    ⟨x, y⟩ = Σᵢ₌₁ⁿ xᵢ · yᵢ<br>
+                    <br>
+                    <strong>几何意义：</strong><br>
+                    • 夹角：cos(θ) = ⟨x,y⟩/(||x||·||y||)<br>
+                    • 投影：projᵧ(x) = (⟨x,y⟩/||y||²) · y<br>
+                    • 正交：⟨x,y⟩ = 0 ⟺ x ⊥ y
+                </div>
+                <div id="innerProductHighPlot" class="plot-container"></div>
+            </div>
+            
+            <div id="inner-calc" class="tab-content">
+                <div class="controls">
+                    <div class="slider-container">
+                        <label>维度：</label>
+                        <input type="range" class="slider" id="dimensionSlider" min="2" max="10" value="3">
+                        <span id="dimensionValue">3D</span>
+                    </div>
+                    <div class="slider-container">
+                        <label>向量1角度：</label>
+                        <input type="range" class="slider" id="v1AngleSlider" min="0" max="360" value="45">
+                        <span id="v1AngleValue">45°</span>
+                    </div>
+                    <div class="slider-container">
+                        <label>向量2角度：</label>
+                        <input type="range" class="slider" id="v2AngleSlider" min="0" max="360" value="60">
+                        <span id="v2AngleValue">60°</span>
+                    </div>
+                    <button class="button" onclick="updateInnerProductCalculation()">更新内积</button>
+                </div>
+                <div id="innerProductCalcPlot" class="plot-container"></div>
+            </div>
+        </div>
+        
+        <!-- 第2节：傅里叶变换 -->
+        <div class="section" id="section2">
+            <h2>2️⃣ 傅里叶变换作为酉算子</h2>
+            
+            <div class="math-formula">
+                <strong>Parseval恒等式：</strong> ⟨f, g⟩ = ⟨ℱ{f}, ℱ{g}⟩
+            </div>
+            
+            <div class="tabs">
+                <div class="tab active" onclick="showTab(event, 'fourier-1d')">1D信号</div>
+                <div class="tab" onclick="showTab(event, 'fourier-2d')">2D信号</div>
+                <div class="tab" onclick="showTab(event, 'fourier-high')">高维推广</div>
+                <div class="tab" onclick="showTab(event, 'fourier-unitary')">酉算子性质</div>
+            </div>
+            
+            <div id="fourier-1d" class="tab-content active">
+                <div id="fourier1DPlot" class="plot-container-2d"></div>
+            </div>
+            
+            <div id="fourier-2d" class="tab-content">
+                <div id="fourier2DPlot" class="plot-container"></div>
+            </div>
+            
+            <div id="fourier-high" class="tab-content">
+                <div class="math-formula">
+                    <strong>n维傅里叶变换：</strong><br>
+                    ℱ{f}(ω₁,...,ωₙ) = ∫...∫ f(x₁,...,xₙ) e^(-i2πΣⱼωⱼxⱼ) dx₁...dxₙ<br>
+                    <br>
+                    <strong>应用实例：</strong><br>
+                    • 图像处理：2D傅里叶变换<br>
+                    • 视频分析：3D傅里叶变换 (x,y,t)<br>
+                    • 医学成像：3D/4D重建<br>
+                    • 量子计算：高维希尔伯特空间
+                </div>
+                <div id="fourierHighPlot" class="plot-container"></div>
+            </div>
+            
+            <div id="fourier-unitary" class="tab-content">
+                <div id="fourierUnitaryPlot" class="plot-container"></div>
+            </div>
+        </div>
+        
+        <!-- 第7节：流形学习（新增） -->
+        <div class="section" id="section7">
+            <h2>7️⃣ 高维数据流形学习</h2>
+            
+            <div class="insight-box">
+                <strong>💡 流形学习洞察：</strong>
+                高维数据通常具有低维流形结构，通过降维技术可以揭示其内在几何特征。
+            </div>
+            
+            <div class="tabs">
+                <div class="tab active" onclick="showTab(event, 'manifold-swiss')">Swiss Roll</div>
+                <div class="tab" onclick="showTab(event, 'manifold-scurve')">S-Curve</div>
+                <div class="tab" onclick="showTab(event, 'manifold-pca')">PCA降维</div>
+                <div class="tab" onclick="showTab(event, 'manifold-mds')">MDS距离</div>
+            </div>
+            
+            <div id="manifold-swiss" class="tab-content active">
+                <div id="manifoldSwissPlot" class="plot-container"></div>
+            </div>
+            
+            <div id="manifold-scurve" class="tab-content">
+                <div id="manifoldScurvePlot" class="plot-container"></div>
+            </div>
+            
+            <div id="manifold-pca" class="tab-content">
+                <div id="manifoldPCAPlot" class="plot-container"></div>
+            </div>
+            
+            <div id="manifold-mds" class="tab-content">
+                <div id="manifoldMDSPlot" class="plot-container"></div>
+            </div>
+        </div>
+        
+        <!-- 第8节：神经网络权重空间（新增） -->
+        <div class="section" id="section8">
+            <h2>8️⃣ 神经网络高维权重空间</h2>
+            
+            <div class="math-formula">
+                <strong>权重空间优化：</strong> θ_{t+1} = θ_t - η ∇_θ ℒ(θ_t)
+            </div>
+            
+            <div class="warning-box">
+                <strong>⚠️ 高维优化挑战：</strong><br>
+                • 维度灾难：指数增长的搜索空间<br>
+                • 鞍点普遍：局部最小值变少<br>
+                • 梯度消失/爆炸：深层网络特有<br>
+                • 损失景观：复杂的高维地形
+            </div>
+            
+            <div class="tabs">
+                <div class="tab active" onclick="showTab(event, 'weight-trajectory')">优化轨迹</div>
+                <div class="tab" onclick="showTab(event, 'weight-landscape')">损失地形</div>
+                <div class="tab" onclick="showTab(event, 'weight-hessian')">Hessian分析</div>
+                <div class="tab" onclick="showTab(event, 'weight-geometry')">几何直觉</div>
+            </div>
+            
+            <div id="weight-trajectory" class="tab-content active">
+                <div class="controls">
+                    <div class="slider-container">
+                        <label>学习率：</label>
+                        <input type="range" class="slider" id="learningRateSlider" min="1" max="100" value="10">
+                        <span id="learningRateValue">0.01</span>
+                    </div>
+                    <div class="slider-container">
+                        <label>动量：</label>
+                        <input type="range" class="slider" id="momentumSlider" min="0" max="100" value="90">
+                        <span id="momentumValue">0.9</span>
+                    </div>
+                    <button class="button" onclick="animateOptimization()">▶ 播放优化</button>
+                    <button class="button" onclick="resetOptimization()">🔄 重置</button>
+                </div>
+                <div id="weightTrajectoryPlot" class="plot-container"></div>
+            </div>
+            
+            <div id="weight-landscape" class="tab-content">
+                <div id="weightLandscapePlot" class="plot-container"></div>
+            </div>
+            
+            <div id="weight-hessian" class="tab-content">
+                <div id="weightHessianPlot" class="plot-container"></div>
+            </div>
+            
+            <div id="weight-geometry" class="tab-content">
+                <div class="math-formula">
+                    <strong>高维优化的几何解释：</strong><br>
+                    • 梯度：最陡下降方向<br>
+                    • Hessian：局部曲率信息<br>
+                    • 自然梯度：考虑信息几何<br>
+                    • 流形优化：约束在解流形上
+                </div>
+                <div id="weightGeometryPlot" class="plot-container"></div>
+            </div>
+        </div>
+        
+        <!-- 第9节：多维傅里叶级数（新增） -->
+        <div class="section" id="section9">
+            <h2>9️⃣ 多维傅里叶级数逼近</h2>
+            
+            <div class="math-formula">
+                <strong>2D傅里叶级数：</strong> f(x,y) ≈ Σₘₙ c_{mn} e^{i(mx+ny)}
+            </div>
+            
+            <div class="tabs">
+                <div class="tab active" onclick="showTab(event, 'fourier-target')">目标函数</div>
+                <div class="tab" onclick="showTab(event, 'fourier-approx')">逼近过程</div>
+                <div class="tab" onclick="showTab(event, 'fourier-convergence')">收敛分析</div>
+                <div class="tab" onclick="showTab(event, 'fourier-error')">误差分析</div>
+            </div>
+            
+            <div id="fourier-target" class="tab-content active">
+                <div id="fourierTargetPlot" class="plot-container"></div>
+            </div>
+            
+            <div id="fourier-approx" class="tab-content">
+                <div class="controls">
+                    <div class="slider-container">
+                        <label>傅里叶阶数：</label>
+                        <input type="range" class="slider" id="fourierOrderSlider" min="1" max="20" value="5">
+                        <span id="fourierOrderValue">5</span>
+                    </div>
+                    <button class="button" onclick="updateFourierApproximation()">更新逼近</button>
+                </div>
+                <div id="fourierApproxPlot" class="plot-container"></div>
+            </div>
+            
+            <div id="fourier-convergence" class="tab-content">
+                <div id="fourierConvergencePlot" class="plot-container"></div>
+            </div>
+            
+            <div id="fourier-error" class="tab-content">
+                <div id="fourierErrorPlot" class="plot-container"></div>
+            </div>
+        </div>
+        
+        <!-- 第10节：高维分类边界（新增） -->
+        <div class="section" id="section10">
+            <h2>🔟 高维特征空间分类</h2>
+            
+            <div class="insight-box">
+                <strong>💡 高维分类洞察：</strong>
+                在高维特征空间中，线性分类器可以解决复杂的非线性问题。
+            </div>
+            
+            <div class="tabs">
+                <div class="tab active" onclick="showTab(event, 'classify-linear')">线性可分</div>
+                <div class="tab" onclick="showTab(event, 'classify-kernel')">核方法</div>
+                <div class="tab" onclick="showTab(event, 'classify-svm')">SVM边界</div>
+                <div class="tab" onclick="showTab(event, 'classify-geometry')">几何解释</div>
+            </div>
+            
+            <div id="classify-linear" class="tab-content active">
+                <div id="classifyLinearPlot" class="plot-container"></div>
+            </div>
+            
+            <div id="classify-kernel" class="tab-content">
+                <div id="classifyKernelPlot" class="plot-container"></div>
+            </div>
+            
+            <div id="classify-svm" class="tab-content">
+                <div id="classifySVMPlot" class="plot-container"></div>
+            </div>
+            
+            <div id="classify-geometry" class="tab-content">
+                <div class="math-formula">
+                    <strong>高维分类的几何：</strong><br>
+                    • 超平面：d维空间中的(d-1)维子空间<br>
+                    • 间隔：到超平面的最短距离<br>
+                    • 支持向量：定义边界的关键点<br>
+                    • 核技巧：隐式映射到高维空间
+                </div>
+                <div id="classifyGeometryPlot" class="plot-container"></div>
+            </div>
+        </div>
+        
+        <!-- 导航按钮 -->
+        <div class="nav-buttons">
+            <button class="nav-button" onclick="previousSection()">⬅ 上一节</button>
+            <button class="nav-button" onclick="nextSection()">下一节 ➡</button>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let currentSection = 0;
+        const sections = ['section1', 'section2', 'section7', 'section8', 'section9', 'section10'];
+        let currentDimension = '2d';
+        let animationId = null;
+        
+        // 维度切换
+        function toggleDimension(dim) {
+            currentDimension = dim;
+            
+            // 更新按钮状态
+            const buttons = document.querySelectorAll('.dimension-button');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // 根据维度显示/隐藏内容
+            const allTabs = document.querySelectorAll('.tab');
+            allTabs.forEach(tab => {
+                const tabText = tab.textContent;
+                if (dim === '2d' && tabText.includes('2D')) {
+                    tab.style.display = 'inline-block';
+                } else if (dim === '3d' && tabText.includes('3D')) {
+                    tab.style.display = 'inline-block';
+                } else if (dim === 'high' && (tabText.includes('高维') || tabText.includes('核'))) {
+                    tab.style.display = 'inline-block';
+                } else if (dim === 'all') {
+                    tab.style.display = 'inline-block';
+                } else {
+                    tab.style.display = 'none';
+                }
+            });
+            
+            // 重新初始化当前显示的图表
+            initializeVisiblePlots();
+        }
+        
+        // 标签页切换
+        function showTab(event, tabId) {
+            const tabContents = event.target.parentElement.parentElement.querySelectorAll('.tab-content');
+            const tabs = event.target.parentElement.querySelectorAll('.tab');
+            
+            tabContents.forEach(content => content.classList.remove('active'));
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+        }
+        
+        // 导航功能
+        function nextSection() {
+            currentSection = (currentSection + 1) % sections.length;
+            document.getElementById(sections[currentSection]).scrollIntoView({behavior: 'smooth'});
+        }
+        
+        function previousSection() {
+            currentSection = (currentSection - 1 + sections.length) % sections.length;
+            document.getElementById(sections[currentSection]).scrollIntoView({behavior: 'smooth'});
+        }
+        
+        // 滑块值更新
+        document.getElementById('dimensionSlider').addEventListener('input', function(e) {
+            document.getElementById('dimensionValue').textContent = e.target.value + 'D';
+        });
+        
+        document.getElementById('v1AngleSlider').addEventListener('input', function(e) {
+            document.getElementById('v1AngleValue').textContent = e.target.value + '°';
+        });
+        
+        document.getElementById('v2AngleSlider').addEventListener('input', function(e) {
+            document.getElementById('v2AngleValue').textContent = e.target.value + '°';
+        });
+        
+        document.getElementById('learningRateSlider').addEventListener('input', function(e) {
+            document.getElementById('learningRateValue').textContent = (e.target.value / 1000).toFixed(3);
+        });
+        
+        document.getElementById('momentumSlider').addEventListener('input', function(e) {
+            document.getElementById('momentumValue').textContent = (e.target.value / 100).toFixed(2);
+        });
+        
+        document.getElementById('fourierOrderSlider').addEventListener('input', function(e) {
+            document.getElementById('fourierOrderValue').textContent = e.target.value;
+        });
+        
+        // 生成2D内积数据
+        function generate2DInnerProductData() {
+            const theta1 = Math.PI / 4;
+            const theta2 = Math.PI / 3;
+            
+            const v1 = [Math.cos(theta1) * 2, Math.sin(theta1) * 2];
+            const v2 = [Math.cos(theta2) * 1.5, Math.sin(theta2) * 1.5];
+            
+            const innerProduct = v1[0] * v2[0] + v1[1] * v2[1];
+            const angle = Math.acos(innerProduct / (Math.sqrt(v1[0]**2 + v1[1]**2) * Math.sqrt(v2[0]**2 + v2[1]**2)));
+            
+            return {
+                vectors: [
+                    {
+                        x: [0, v1[0]], y: [0, v1[1]],
+                        mode: 'lines+markers', name: '向量 v₁',
+                        line: {color: 'blue', width: 4}, marker: {size: 10}
+                    },
+                    {
+                        x: [0, v2[0]], y: [0, v2[1]],
+                        mode: 'lines+markers', name: '向量 v₂',
+                        line: {color: 'red', width: 4}, marker: {size: 10}
+                    }
+                ],
+                innerProduct: innerProduct,
+                angle: angle
+            };
+        }
+        
+        // 生成3D内积数据
+        function generate3DInnerProductData() {
+            const theta1 = Math.PI / 4;
+            const phi1 = Math.PI / 6;
+            const theta2 = Math.PI / 3;
+            const phi2 = Math.PI / 4;
+            
+            const v1 = [
+                Math.sin(theta1) * Math.cos(phi1) * 2,
+                Math.sin(theta1) * Math.sin(phi1) * 2,
+                Math.cos(theta1) * 2
+            ];
+            
+            const v2 = [
+                Math.sin(theta2) * Math.cos(phi2) * 1.5,
+                Math.sin(theta2) * Math.sin(phi2) * 1.5,
+                Math.cos(theta2) * 1.5
+            ];
+            
+            const innerProduct = v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
+            const angle = Math.acos(innerProduct / (Math.sqrt(v1[0]**2 + v1[1]**2 + v1[2]**2) * Math.sqrt(v2[0]**2 + v2[1]**2 + v2[2]**2)));
+            
+            return {
+                vectors: [
+                    {
+                        x: [0, v1[0]], y: [0, v1[1]], z: [0, v1[2]],
+                        mode: 'lines+markers', name: '向量 v₁',
+                        line: {color: 'blue', width: 6}, marker: {size: 8}
+                    },
+                    {
+                        x: [0, v2[0]], y: [0, v2[1]], z: [0, v2[2]],
+                        mode: 'lines+markers', name: '向量 v₂',
+                        line: {color: 'red', width: 6}, marker: {size: 8}
+                    }
+                ],
+                innerProduct: innerProduct,
+                angle: angle
+            };
+        }
+        
+        // 生成Swiss Roll数据
+        function generateSwissRollData() {
+            const n = 1000;
+            const t = Array.from({length: n}, (_, i) => (i / n) * 4 * Math.PI);
+            const noise = Array.from({length: n}, () => (Math.random() - 0.5) * 0.1);
+            
+            const x = t.map((ti, i) => ti * Math.cos(ti) + noise[i]);
+            const y = t.map((ti, i) => ti * Math.sin(ti) + noise[i]);
+            const z = t.map((ti, i) => (ti / (4 * Math.PI)) * 10 - 5 + noise[i] * 0.5);
+            const color = t;
+            
+            return {
+                x: x, y: y, z: z, color: color,
+                type: 'scatter3d',
+                mode: 'markers',
+                marker: {size: 3, color: color, colorscale: 'Viridis'},
+                showlegend: false,
+                hovertemplate: 'X: %{x:.2f}<br>Y: %{y:.2f}<br>Z: %{z:.2f}<extra></extra>'
+            };
+        }
+        
+        // 生成神经网络权重轨迹
+        function generateWeightTrajectoryData() {
+            const nSteps = 50;
+            const nDimensions = 10;
+            
+            // 模拟优化轨迹
+            const trajectory = [];
+            let currentPos = Array.from({length: nDimensions}, () => (Math.random() - 0.5) * 4);
+            trajectory.push([...currentPos]);
+            
+            for (let i = 1; i < nSteps; i++) {
+                // 模拟梯度下降
+                const gradient = currentPos.map(x => x + 0.1 * Math.sin(x) + (Math.random() - 0.5) * 0.1);
+                currentPos = currentPos.map((x, j) => x - 0.1 * gradient[j]);
+                trajectory.push([...currentPos]);
+            }
+            
+            // 简化的PCA到3D
+            const trajectory3D = trajectory.map(point => [
+                point[0] + point[1] * 0.5,
+                point[2] + point[3] * 0.5,
+                point[4] + point[5] * 0.5
+            ]);
+            
+            const lossValues = trajectory.map(point => 
+                point.reduce((sum, x) => sum + x*x, 0) + 0.5 * point.reduce((sum, x) => sum + Math.sin(x), 0)
+            );
+            
+            return {
+                x: trajectory3D.map(p => p[0]),
+                y: trajectory3D.map(p => p[1]),
+                z: trajectory3D.map(p => p[2]),
+                loss: lossValues,
+                type: 'scatter3d',
+                mode: 'lines+markers',
+                line: {color: 'blue', width: 4},
+                marker: {size: 5, color: lossValues, colorscale: 'Viridis'},
+                name: '优化轨迹',
+                hovertemplate: '步数: %{marker.color}<br>PC1: %{x:.2f}<br>PC2: %{y:.2f}<br>PC3: %{z:.2f}<extra></extra>'
+            };
+        }
+        
+        // 初始化所有图表
+        function initializePlots() {
+            // 2D内积
+            const inner2DData = generate2DInnerProductData();
+            Plotly.newPlot('innerProduct2DPlot', inner2DData.vectors, {
+                title: '2D希尔伯特空间内积',
+                xaxis: {title: 'x', scaleanchor: "y", scaleratio: 1},
+                yaxis: {title: 'y', scaleanchor: "x", scaleratio: 1},
+                height: 450
+            });
+            
+            // 3D内积
+            const inner3DData = generate3DInnerProductData();
+            Plotly.newPlot('innerProduct3DPlot', inner3DData.vectors, {
+                title: '3D希尔伯特空间内积',
+                scene: {
+                    xaxis: {title: 'X'}, yaxis: {title: 'Y'}, zaxis: {title: 'Z'},
+                    aspectmode: 'cube',
+                    camera: {eye: {x: 1.5, y: 1.5, z: 1.5}}
+                },
+                height: 550
+            });
+            
+            // Swiss Roll
+            const swissData = generateSwissRollData();
+            Plotly.newPlot('manifoldSwissPlot', [swissData], {
+                title: 'Swiss Roll流形',
+                scene: {
+                    xaxis: {title: 'X'}, yaxis: {title: 'Y'}, zaxis: {title: 'Z'},
+                    camera: {eye: {x: 1.5, y: 1.5, z: 1.5}}
+                },
+                height: 550
+            });
+            
+            // 神经网络权重轨迹
+            const weightData = generateWeightTrajectoryData();
+            Plotly.newPlot('weightTrajectoryPlot', [weightData], {
+                title: '神经网络权重空间优化轨迹',
+                scene: {
+                    xaxis: {title: '主成分1'}, yaxis: {title: '主成分2'}, zaxis: {title: '主成分3'},
+                    camera: {eye: {x: 1.2, y: 1.2, z: 1.2}}
+                },
+                height: 550
+            });
+            
+            // 初始化其他图表...
+            initializeOtherPlots();
+        }
+        
+        // 初始化其他图表
+        function initializeOtherPlots() {
+            // 1D傅里叶变换
+            const t = [];
+            const signal = [];
+            for (let i = 0; i < 100; i++) {
+                t.push(i / 10);
+                signal.push(Math.sin(t[i]) + 0.5 * Math.sin(3 * t[i]));
+            }
+            
+            Plotly.newPlot('fourier1DPlot', [
+                {x: t, y: signal, mode: 'lines', name: '信号', line: {color: 'blue', width: 2}}
+            ], {
+                title: '1D信号及其傅里叶变换',
+                xaxis: {title: '时间'},
+                yaxis: {title: '幅度'},
+                height: 450
+            });
+            
+            // 2D傅里叶变换
+            const x2d = [], y2d = [], signal2d = [];
+            for (let i = 0; i < 30; i++) {
+                x2d.push((i - 15) / 3);
+                y2d.push((i - 15) / 3);
+            }
+            
+            for (let i = 0; i < 30; i++) {
+                const row = [];
+                for (let j = 0; j < 30; j++) {
+                    row.push(Math.exp(-(x2d[j]**2 + y2d[i]**2) / 4));
+                }
+                signal2d.push(row);
+            }
+            
+            Plotly.newPlot('fourier2DPlot', [{
+                z: signal2d,
+                type: 'surface',
+                colorscale: 'Viridis',
+                showscale: true
+            }], {
+                title: '2D信号表面',
+                scene: {
+                    xaxis: {title: 'X'}, yaxis: {title: 'Y'}, zaxis: {title: '幅度'},
+                    camera: {eye: {x: 1.5, y: 1.5, z: 1.5}}
+                },
+                height: 550
+            });
+            
+            // 生成更多可视化...
+            generateAdditionalVisualizations();
+        }
+        
+        // 生成额外的可视化
+        function generateAdditionalVisualizations() {
+            // S-Curve
+            const n = 800;
+            const s = Array.from({length: n}, (_, i) => (i / n) * 3 * Math.PI - 1.5 * Math.PI);
+            const t = Array.from({length: n}, () => (Math.random() - 0.5) * 2);
+            
+            const sX = s.map(si => Math.sin(si));
+            const sY = s.map(si => 1.5 * t[s.indexOf(si)]);
+            const sZ = s.map(si => Math.cos(si));
+            const sColor = s;
+            
+            Plotly.newPlot('manifoldScurvePlot', [{
+                x: sX, y: sY, z: sZ,
+                mode: 'markers',
+                marker: {size: 3, color: sColor, colorscale: 'Plasma'},
+                showlegend: false,
+                type: 'scatter3d'
+            }], {
+                title: 'S-Curve流形',
+                scene: {
+                    xaxis: {title: 'X'}, yaxis: {title: 'Y'}, zaxis: {title: 'Z'},
+                    camera: {eye: {x: 1.5, y: 1.5, z: 1.5}}
+                },
+                height: 550
+            });
+            
+            // 高维PCA可视化
+            const highDimData = [];
+            for (let i = 0; i < 300; i++) {
+                const point = [];
+                for (let j = 0; j < 20; j++) {
+                    point.push((Math.random() - 0.5) * 4);
+                }
+                highDimData.push(point);
+            }
+            
+            // 简化的PCA到3D
+            const pcaData = highDimData.map(point => [
+                point.slice(0, 5).reduce((a, b) => a + b, 0),
+                point.slice(5, 10).reduce((a, b) => a + b, 0),
+                point.slice(10, 15).reduce((a, b) => a + b, 0)
+            ]);
+            
+            const colors = highDimData.map((_, i) => i % 3);
+            
+            Plotly.newPlot('manifoldPCAPlot', [{
+                x: pcaData.map(p => p[0]),
+                y: pcaData.map(p => p[1]),
+                z: pcaData.map(p => p[2]),
+                mode: 'markers',
+                marker: {size: 4, color: colors, colorscale: 'Rainbow'},
+                showlegend: false,
+                type: 'scatter3d'
+            }], {
+                title: '高维数据PCA降维',
+                scene: {
+                    xaxis: {title: '主成分1'}, yaxis: {title: '主成分2'}, zaxis: {title: '主成分3'},
+                    camera: {eye: {x: 1.5, y: 1.5, z: 1.5}}
+                },
+                height: 550
+            });
+            
+            // 多维傅里叶级数目标函数
+            const x = [], y = [], targetFunc = [];
+            for (let i = 0; i < 50; i++) {
+                x.push((i / 50) * 4 * Math.PI - 2 * Math.PI);
+                y.push((i / 50) * 4 * Math.PI - 2 * Math.PI);
+            }
+            
+            for (let i = 0; i < 50; i++) {
+                const row = [];
+                for (let j = 0; j < 50; j++) {
+                    row.push(Math.sin(x[j]) * Math.cos(y[i]) + 
+                           0.5 * Math.sin(2*x[j]) * Math.sin(2*y[i]));
+                }
+                targetFunc.push(row);
+            }
+            
+            Plotly.newPlot('fourierTargetPlot', [{
+                z: targetFunc,
+                type: 'surface',
+                colorscale: 'Viridis',
+                showscale: true
+            }], {
+                title: '目标函数：复合三角函数',
+                scene: {
+                    xaxis: {title: 'X'}, yaxis: {title: 'Y'}, zaxis: {title: 'f(x,y)'},
+                    camera: {eye: {x: 1.5, y: 1.5, z: 1.5}}
+                },
+                height: 550
+            });
+            
+            // 高维分类边界
+            const class1Data = [];
+            const class2Data = [];
+            
+            for (let i = 0; i < 100; i++) {
+                class1Data.push([
+                    1 + (Math.random() - 0.5) * 2,
+                    1 + (Math.random() - 0.5) * 2,
+                    1 + (Math.random() - 0.5) * 2
+                ]);
+                class2Data.push([
+                    -1 + (Math.random() - 0.5) * 2,
+                    -1 + (Math.random() - 0.5) * 2,
+                    -1 + (Math.random() - 0.5) * 2
+                ]);
+            }
+            
+            Plotly.newPlot('classifyLinearPlot', [
+                {
+                    x: class1Data.map(p => p[0]), y: class1Data.map(p => p[1]), z: class1Data.map(p => p[2]),
+                    mode: 'markers', marker: {color: 'blue', size: 5}, name: '类别1', type: 'scatter3d'
+                },
+                {
+                    x: class2Data.map(p => p[0]), y: class2Data.map(p => p[1]), z: class2Data.map(p => p[2]),
+                    mode: 'markers', marker: {color: 'red', size: 5}, name: '类别2', type: 'scatter3d'
+                }
+            ], {
+                title: '高维特征空间中的线性可分数据',
+                scene: {
+                    xaxis: {title: '特征1'}, yaxis: {title: '特征2'}, zaxis: {title: '特征3'},
+                    camera: {eye: {x: 1.5, y: 1.5, z: 1.5}}
+                },
+                height: 550
+            });
+        }
+        
+        // 更新内积计算
+        function updateInnerProductCalculation() {
+            const dim = parseInt(document.getElementById('dimensionSlider').value);
+            const angle1 = parseFloat(document.getElementById('v1AngleSlider').value) * Math.PI / 180;
+            const angle2 = parseFloat(document.getElementById('v2AngleSlider').value) * Math.PI / 180;
+            
+            // 简化的高维向量生成
+            const v1 = Array.from({length: dim}, (_, i) => Math.cos(angle1 + i * 0.5) * (i % 2 + 1));
+            const v2 = Array.from({length: dim}, (_, i) => Math.sin(angle2 + i * 0.3) * (i % 2 + 1));
+            
+            const innerProduct = v1.reduce((sum, x, i) => sum + x * v2[i], 0);
+            const norm1 = Math.sqrt(v1.reduce((sum, x) => sum + x*x, 0));
+            const norm2 = Math.sqrt(v2.reduce((sum, x) => sum + x*x, 0));
+            const angle = Math.acos(innerProduct / (norm1 * norm2));
+            
+            // 可视化（简化为2D投影）
+            const data = [{
+                x: [0, v1[0]], y: [0, v1[1]],
+                mode: 'lines+markers', name: '向量 v₁ (投影)',
+                line: {color: 'blue', width: 4}, marker: {size: 10}
+            }, {
+                x: [0, v2[0]], y: [0, v2[1]],
+                mode: 'lines+markers', name: '向量 v₂ (投影)',
+                line: {color: 'red', width: 4}, marker: {size: 10}
+            }];
+            
+            Plotly.redraw('innerProductCalcPlot', data, {
+                title: `${dim}D内积计算：${innerProduct.toFixed(3)}, 夹角：${(angle * 180 / Math.PI).toFixed(1)}°`,
+                xaxis: {title: '第1维投影'},
+                yaxis: {title: '第2维投影'},
+                height: 550
+            });
+        }
+        
+        // 动画控制
+        function animateOptimization() {
+            console.log('播放优化动画...');
+        }
+        
+        function resetOptimization() {
+            console.log('重置优化轨迹');
+        }
+        
+        function updateFourierApproximation() {
+            const order = parseInt(document.getElementById('fourierOrderSlider').value);
+            console.log('更新傅里叶逼近，阶数：', order);
+        }
+        
+        // 初始化可见的图表
+        function initializeVisiblePlots() {
+            // 根据当前维度设置重新初始化相关图表
+            setTimeout(() => {
+                initializePlots();
+            }, 100);
+        }
+        
+        // 页面加载完成后初始化
+        window.addEventListener('load', initializePlots);
+    </script>
+</body>
+</html>

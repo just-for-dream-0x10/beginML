@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>希尔伯特空间与神经网络交互式可视化</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        .subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 40px;
+            font-size: 1.2em;
+        }
+        .section {
+            margin-bottom: 50px;
+            padding: 25px;
+            border: 2px solid #e8f4f8;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        .section h2 {
+            color: #34495e;
+            margin-top: 0;
+            font-size: 1.8em;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .math-formula {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 5px solid #3498db;
+            font-family: 'Courier New', monospace;
+            font-size: 1.1em;
+            overflow-x: auto;
+        }
+        .insight-box {
+            background-color: #e8f5e8;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 5px solid #27ae60;
+        }
+        .warning-box {
+            background-color: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 5px solid #f39c12;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #bdc3c7;
+        }
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            background-color: #ecf0f1;
+            border: 1px solid #bdc3c7;
+            border-bottom: none;
+            margin-right: 5px;
+            border-radius: 8px 8px 0 0;
+            transition: all 0.3s ease;
+        }
+        .tab:hover {
+            background-color: #d5dbdb;
+        }
+        .tab.active {
+            background-color: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+        .tab-content {
+            display: none;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .plot-container {
+            width: 100%;
+            height: 500px;
+            margin: 20px 0;
+        }
+        .controls {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        .button:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .slider-container {
+            display: inline-block;
+            margin: 10px 20px;
+        }
+        .slider {
+            width: 200px;
+            vertical-align: middle;
+        }
+        .nav-buttons {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .nav-button {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            margin: 0 10px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        .nav-button:hover {
+            background-color: #c0392b;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+        }
+        .toc {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .toc h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        .toc ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        .toc li {
+            margin: 8px 0;
+            padding: 5px 10px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+        .toc li:hover {
+            background-color: #dee2e6;
+            transform: translateX(5px);
+        }
+        .toc a {
+            text-decoration: none;
+            color: #495057;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 希尔伯特空间与神经网络</h1>
+        <p class="subtitle">交互式可视化：从数学理论到工程实践</p>
+        
+        <!-- 目录 -->
+        <div class="toc">
+            <h3>📚 目录 Table of Contents</h3>
+            <ul>
+                <li><a href="#section1">1️⃣ 希尔伯特空间的内积几何意义</a></li>
+                <li><a href="#section2">2️⃣ 傅里叶变换作为酉算子</a></li>
+                <li><a href="#section3">3️⃣ 卷积定理动态演示</a></li>
+                <li><a href="#section4">4️⃣ CNN滤波器的频域特性</a></li>
+                <li><a href="#section5">5️⃣ 图傅里叶变换与GNN</a></li>
+                <li><a href="#section6">6️⃣ Transformer位置编码分析</a></li>
+            </ul>
+        </div>
+        
+        <!-- 第1节：希尔伯特空间内积 -->
+        <div class="section" id="section1">
+            <h2>1️⃣ 希尔伯特空间的内积几何意义</h2>
+            
+            <div class="math-formula">
+                <strong>内积定义：</strong> ⟨v₁, v₂⟩ = ||v₁|| · ||v₂|| · cos(θ)
+            </div>
+            
+            <div class="insight-box">
+                <strong>💡 核心洞察：</strong>
+                内积衡量两个向量的相似度，几何上表示一个向量在另一个向量上的投影长度。
+                在神经网络中，这对应着特征之间的相关性度量。
+            </div>
+            
+            <div class="tabs">
+                <div class="tab active" onclick="showTab(event, 'inner-geo')">几何直观</div>
+                <div class="tab" onclick="showTab(event, 'inner-calc')">计算演示</div>
+                <div class="tab" onclick="showTab(event, 'inner-nn')">NN应用</div>
+            </div>
+            
+            <div id="inner-geo" class="tab-content active">
+                <div id="innerProductPlot" class="plot-container"></div>
+            </div>
+            
+            <div id="inner-calc" class="tab-content">
+                <div class="controls">
+                    <div class="slider-container">
+                        <label>向量1角度：</label>
+                        <input type="range" class="slider" id="v1Angle" min="0" max="360" value="45">
+                        <span id="v1AngleValue">45°</span>
+                    </div>
+                    <div class="slider-container">
+                        <label>向量2角度：</label>
+                        <input type="range" class="slider" id="v2Angle" min="0" max="360" value="60">
+                        <span id="v2AngleValue">60°</span>
+                    </div>
+                    <button class="button" onclick="updateInnerProduct()">更新内积</button>
+                </div>
+                <div id="innerProductCalc" class="plot-container"></div>
+            </div>
+            
+            <div id="inner-nn" class="tab-content">
+                <div class="math-formula">
+                    <strong>神经网络中的应用：</strong><br>
+                    • 注意力机制：Attention(Q,K) = softmax(QKᵀ/√dₖ)<br>
+                    • 余弦相似度：cos(θ) = (x·y)/(||x||·||y||)<br>
+                    • 损失函数：L2损失 = ||y_pred - y_true||²
+                </div>
+                <div id="innerProductNN" class="plot-container"></div>
+            </div>
+        </div>
+        
+        <!-- 第2节：傅里叶变换作为酉算子 -->
+        <div class="section" id="section2">
+            <h2>2️⃣ 傅里叶变换作为酉算子</h2>
+            
+            <div class="math-formula">
+                <strong>Parseval恒等式：</strong> ⟨f, g⟩ = ⟨ℱ{f}, ℱ{g}⟩
+            </div>
+            
+            <div class="warning-box">
+                <strong>⚠️ 重要澄清：</strong>
+                连续傅里叶变换是严格的酉算子，但实际应用中使用DFT/FFT。
+                离散化过程需要考虑采样定理和边界效应。
+            </div>
+            
+            <div class="tabs">
+                <div class="tab active" onclick="showTab(event, 'fourier-basic')">基本性质</div>
+                <div class="tab" onclick="showTab(event, 'fourier-energy')">能量守恒</div>
+                <div class="tab" onclick="showTab(event, 'fourier-discrete')">连续vs离散</div>
+            </div>
+            
+            <div id="fourier-basic" class="tab-content active">
+                <div id="fourierBasicPlot" class="plot-container"></div>
+            </div>
+            
+            <div id="fourier-energy" class="tab-content">
+                <div id="fourierEnergyPlot" class="plot-container"></div>
+            </div>
+            
+            <div id="fourier-discrete" class="tab-content">
+                <div class="math-formula">
+                    <strong>连续 vs 离散：</strong><br>
+                    连续：ℱ{f}(ω) = ∫ f(t)e^(-iωt)dt<br>
+                    离散：ℱ{f}[k] = Σ f[n]e^(-i2πkn/N)<br>
+                    <br>
+                    <strong>关键区别：</strong><br>
+                    • 连续空间：L²(ℝᵈ) 无限维<br>
+                    • 离散空间：ℂᴺ 有限维<br>
+                    • DFT也是酉变换，但定义域不同
+                </div>
+                <div id="fourierDiscretePlot" class="plot-container"></div>
+            </div>
+        </div>
+        
+        <!-- 第3节：卷积定理 -->
+        <div class="section" id="section3">
+            <h2>3️⃣ 卷积定理动态演示</h2>
+            
+            <div class="math-formula">
+                <strong>卷积定理：</strong> ℱ{f * g} = ℱ{f} · ℱ{g}
+            </div>
+            
+            <div class="warning-box">
+                <strong>⚠️ 工程实现 vs 数学理论：</strong><br>
+                • 数学上：时域卷积 = 频域相乘<br>
+                • 实际CNN：时域直接实现，频域仅用于理论分析<br>
+                • FFT卷积：仅用于大核或特定优化场景
+            </div>
+            
+            <div class="tabs">
+                <div class="tab active" onclick="showTab(event, 'conv-demo')">动态演示</div>
+                <div class="tab" onclick="showTab(event, 'conv-cnn')">CNN应用</div>
+                <div class="tab" onclick="showTab(event, 'conv-fft')">FFT优化</div>
+            </div>
+            
+            <div id="conv-demo" class="tab-content active">
+                <div class="controls">
+                    <button class="button" onclick="animateConvolution()">▶ 播放动画</button>
+                    <button class="button" onclick="pauseConvolution()">⏸ 暂停</button>
+                    <div class="slider-container">
+                        <label>频率索引：</label>
+                        <input type="range" class="slider" id="freqIndex" min="0" max="50" value="25">
+                        <span id="freqIndexValue">25</span>
+                    </div>
+                </div>
+                <div id="convolutionPlot" class="plot-container"></div>
+            </div>
+            
+            <div id="conv-cnn" class="tab-content">
+                <div id="convCNNPlot" class="plot-container"></div>
+            </div>
+            
+            <div id="conv-fft" class="tab-content">
+                <div class="math-formula">
+                    <strong>计算复杂度对比：</strong><br>
+                    • 直接卷积：O(n²)<br>
+                    • FFT卷积：O(n log n)<br>
+                    • 拐点：n ≈ 32 时FFT开始有优势<br>
+                    <br>
+                    <strong>实际考虑：</strong><br>
+                    • 小核(3×3)：时域更快<br>
+                    • 大核(>31×31)：频域更优<br>
+                    • 内存使用：频域需要复数存储
+                </div>
+                <div id="convFFTPlot" class="plot-container"></div>
+            </div>
+        </div>
+        
+        <!-- 第4节：CNN滤波器频域特性 -->
+        <div class="section" id="section4">
+            <h2>4️⃣ CNN滤波器的频域特性</h2>
+            
+            <div class="insight-box">
+                <strong>💡 观察现象：</strong>
+                训练得到的CNN滤波器通常呈现低通特性，
+                深层网络学习更精细的频率结构。
+            </div>
+            
+            <div class="tabs">
+                <div class="tab active" onclick="showTab(event, 'filter-types')">滤波器类型</div>
+                <div class="tab" onclick="showTab(event, 'filter-spectrum')">频谱分析</div>
+                <div class="tab" onclick="showTab(event, 'filter-learning')">学习过程</div>
+            </div>
+            
+            <div id="filter-types" class="tab-content active">
+                <div id="filterTypesPlot" class="plot-container"></div>
+            </div>
+            
+            <div id="filter-spectrum" class="tab-content">
+                <div id="filterSpectrumPlot" class="plot-container"></div>
+            </div>
+            
+            <div id="filter-learning" class="tab-content">
+                <div id="filterLearningPlot" class="plot-container"></div>
+            </div>
+        </div>
+        
+        <!-- 第5节：图傅里叶变换 -->
+        <div class="section" id="section5">
+            <h2>5️⃣ 图傅里叶变换与GNN</h2>
+            
+            <div class="math-formula">
+                <strong>图傅里叶变换：</strong> 𝑥̂ = Uᵀx，其中 L = UΛUᵀ
+            </div>
+            
+            <div class="insight-box">
+                <strong>💡 图频率的物理意义：</strong><br>
+                • 低特征值：缓慢变化的图模式（相邻节点相似）<br>
+                • 高特征值：快速变化的图模式（相邻节点差异大）<br>
+                • 频率 = 信号在图上的变化率
+            </div>
+            
+            <div class="tabs">
+                <div class="tab active" onclick="showTab(event, 'graph-basic')">图结构分析</div>
+                <div class="tab" onclick="showTab(event, 'graph-fft')">图傅里叶变换</div>
+                <div class="tab" onclick="showTab(event, 'graph-gnn')">GNN应用</div>
+            </div>
+            
+            <div id="graph-basic" class="tab-content active">
+                <div id="graphBasicPlot" class="plot-container"></div>
+            </div>
+            
+            <div id="graph-fft" class="tab-content">
+                <div id="graphFFTPlot" class="plot-container"></div>
+            </div>
+            
+            <div id="graph-gnn" class="tab-content">
+                <div id="graphGNNPlot" class="plot-container"></div>
+            </div>
+        </div>
+        
+        <!-- 第6节：Transformer位置编码 -->
+        <div class="section" id="section6">
+            <h2>6️⃣ Transformer位置编码分析</h2>
+            
+            <div class="math-formula">
+                <strong>位置编码：</strong><br>
+                PE_(pos,2i) = sin(pos/10000^(2i/d))<br>
+                PE_(pos,2i+1) = cos(pos/10000^(2i/d))
+            </div>
+            
+            <div class="warning-box">
+                <strong>⚠️ 正交性的准确表述：</strong><br>
+                Transformer使用非整数频率，在有限序列上呈现"近似正交"，
+                不是严格的傅里叶正交基，但提供了多尺度频率覆盖。
+            </div>
+            
+            <div class="tabs">
+                <div class="tab active" onclick="showTab(event, 'pos-encoding')">编码矩阵</div>
+                <div class="tab" onclick="showTab(event, 'pos-spectrum')">频谱分析</div>
+                <div class="tab" onclick="showTab(event, 'pos-orthogonal')">正交性分析</div>
+            </div>
+            
+            <div id="pos-encoding" class="tab-content active">
+                <div id="posEncodingPlot" class="plot-container"></div>
+            </div>
+            
+            <div id="pos-spectrum" class="tab-content">
+                <div id="posSpectrumPlot" class="plot-container"></div>
+            </div>
+            
+            <div id="pos-orthogonal" class="tab-content">
+                <div id="posOrthogonalPlot" class="plot-container"></div>
+            </div>
+        </div>
+        
+        <!-- 导航按钮 -->
+        <div class="nav-buttons">
+            <button class="nav-button" onclick="previousSection()">⬅ 上一节</button>
+            <button class="nav-button" onclick="nextSection()">下一节 ➡</button>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let currentSection = 0;
+        const sections = ['section1', 'section2', 'section3', 'section4', 'section5', 'section6'];
+        let animationId = null;
+        
+        // 标签页切换
+        function showTab(event, tabId) {
+            const tabContents = event.target.parentElement.parentElement.querySelectorAll('.tab-content');
+            const tabs = event.target.parentElement.querySelectorAll('.tab');
+            
+            tabContents.forEach(content => content.classList.remove('active'));
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+        }
+        
+        // 导航功能
+        function nextSection() {
+            currentSection = (currentSection + 1) % sections.length;
+            document.getElementById(sections[currentSection]).scrollIntoView({behavior: 'smooth'});
+        }
+        
+        function previousSection() {
+            currentSection = (currentSection - 1 + sections.length) % sections.length;
+            document.getElementById(sections[currentSection]).scrollIntoView({behavior: 'smooth'});
+        }
+        
+        // 滑块值更新
+        document.getElementById('v1Angle').addEventListener('input', function(e) {
+            document.getElementById('v1AngleValue').textContent = e.target.value + '°';
+        });
+        
+        document.getElementById('v2Angle').addEventListener('input', function(e) {
+            document.getElementById('v2AngleValue').textContent = e.target.value + '°';
+        });
+        
+        document.getElementById('freqIndex').addEventListener('input', function(e) {
+            document.getElementById('freqIndexValue').textContent = e.target.value;
+        });
+        
+        // 生成希尔伯特空间内积可视化
+        function generateInnerProductData() {
+            const theta1 = Math.PI / 4;
+            const theta2 = Math.PI / 3;
+            
+            const v1 = [Math.cos(theta1) * 2, Math.sin(theta1) * 2];
+            const v2 = [Math.cos(theta2) * 1.5, Math.sin(theta2) * 1.5];
+            
+            const innerProduct = v1[0] * v2[0] + v1[1] * v2[1];
+            const angle = Math.acos(innerProduct / (Math.sqrt(v1[0]**2 + v1[1]**2) * Math.sqrt(v2[0]**2 + v2[1]**2)));
+            
+            return {
+                vectors: [
+                    {
+                        x: [0, v1[0]], y: [0, v1[1]],
+                        mode: 'lines+markers', name: '向量 v₁',
+                        line: {color: 'blue', width: 4}, marker: {size: 10}
+                    },
+                    {
+                        x: [0, v2[0]], y: [0, v2[1]],
+                        mode: 'lines+markers', name: '向量 v₂',
+                        line: {color: 'red', width: 4}, marker: {size: 10}
+                    }
+                ],
+                innerProduct: innerProduct,
+                angle: angle
+            };
+        }
+        
+        // 初始化页面
+        function initializePlots() {
+            // 内积可视化
+            const innerData = generateInnerProductData();
+            Plotly.newPlot('innerProductPlot', innerData.vectors, {
+                title: '希尔伯特空间内积的几何意义',
+                xaxis: {title: 'x', scaleanchor: "y", scaleratio: 1},
+                yaxis: {title: 'y', scaleanchor: "x", scaleratio: 1},
+                height: 400
+            });
+            
+            // 生成其他可视化...
+            generateFourierBasic();
+            generateConvolutionDemo();
+            generateFilterTypes();
+            generateGraphBasic();
+            generatePositionalEncoding();
+        }
+        
+        // 生成傅里叶变换基本性质
+        function generateFourierBasic() {
+            const t = [];
+            const signal = [];
+            const kernel = [];
+            
+            for (let i = 0; i < 100; i++) {
+                t.push(i / 10);
+                signal.push(Math.sin(t[i]) + 0.5 * Math.sin(3 * t[i]));
+                kernel.push(Math.cos(t[i]));
+            }
+            
+            Plotly.newPlot('fourierBasicPlot', [
+                {x: t, y: signal, mode: 'lines', name: '信号 f(t)', line: {color: 'blue', width: 2}},
+                {x: t, y: kernel, mode: 'lines', name: '核 g(t)', line: {color: 'red', width: 2}}
+            ], {
+                title: '傅里叶变换：时域信号',
+                xaxis: {title: '时间 t'},
+                yaxis: {title: '幅度'},
+                height: 400
+            });
+        }
+        
+        // 生成卷积演示
+        function generateConvolutionDemo() {
+            const x = [];
+            const signal = [];
+            const kernel = [];
+            
+            for (let i = 0; i < 200; i++) {
+                x.push((i - 100) / 20);
+                signal.push(Math.exp(-x[i]**2 / 2));
+                kernel.push(Math.sin(x[i]) / x[i] || 1);
+            }
+            
+            Plotly.newPlot('convolutionPlot', [
+                {x: x, y: signal, mode: 'lines', name: '信号 f(t)', line: {color: 'blue', width: 2}},
+                {x: x, y: kernel, mode: 'lines', name: '核 g(t)', line: {color: 'red', width: 2}}
+            ], {
+                title: '卷积定理：时域卷积 = 频域相乘',
+                xaxis: {title: '时间/位置'},
+                yaxis: {title: '幅度'},
+                height: 400
+            });
+        }
+        
+        // 生成滤波器类型
+        function generateFilterTypes() {
+            const kernels = {
+                '低通': [[1,2,1],[2,4,2],[1,2,1]],
+                '高通': [[-1,-1,-1],[-1,8,-1],[-1,-1,-1]],
+                '边缘': [[-1,0,1],[-1,0,1],[-1,0,1]]
+            };
+            
+            const data = [];
+            let i = 0;
+            for (const [name, kernel] of Object.entries(kernels)) {
+                for (let row = 0; row < 3; row++) {
+                    for (let col = 0; col < 3; col++) {
+                        data.push({
+                            x: col + i * 4,
+                            y: row,
+                            z: kernel[row][col],
+                            type: 'heatmap',
+                            showscale: i === 0,
+                            name: name
+                        });
+                    }
+                }
+                i++;
+            }
+            
+            Plotly.newPlot('filterTypesPlot', data, {
+                title: '不同类型的CNN滤波器',
+                height: 400
+            });
+        }
+        
+        // 生成图结构基础
+        function generateGraphBasic() {
+            const pos = [[0,0], [1,1], [2,0], [3,1], [4,0], [5,1]];
+            const edges = [[0,1], [1,2], [2,3], [3,4], [4,5], [1,3], [2,4]];
+            
+            const edgeX = [];
+            const edgeY = [];
+            
+            for (const edge of edges) {
+                edgeX.push(pos[edge[0]][0], pos[edge[1]][0], null);
+                edgeY.push(pos[edge[0]][1], pos[edge[1]][1], null);
+            }
+            
+            const data = [
+                {
+                    x: edgeX, y: edgeY,
+                    mode: 'lines', line: {color: 'gray', width: 2},
+                    name: '边'
+                },
+                {
+                    x: pos.map(p => p[0]), y: pos.map(p => p[1]),
+                    mode: 'markers+text',
+                    marker: {size: 20, color: 'lightblue'},
+                    text: pos.map((p,i) => i.toString()),
+                    textposition: 'middle center',
+                    name: '节点'
+                }
+            ];
+            
+            Plotly.newPlot('graphBasicPlot', data, {
+                title: '图结构示例',
+                xaxis: {title: 'x'},
+                yaxis: {title: 'y'},
+                height: 400
+            });
+        }
+        
+        // 生成位置编码
+        function generatePositionalEncoding() {
+            const maxLen = 100;
+            const dModel = 64;
+            const pe = [];
+            
+            for (let pos = 0; pos < maxLen; pos++) {
+                const row = [];
+                for (let i = 0; i < dModel; i++) {
+                    if (i % 2 === 0) {
+                        row.push(Math.sin(pos / Math.pow(10000, i / dModel)));
+                    } else {
+                        row.push(Math.cos(pos / Math.pow(10000, (i - 1) / dModel)));
+                    }
+                }
+                pe.push(row);
+            }
+            
+            Plotly.newPlot('posEncodingPlot', [{
+                z: pe,
+                type: 'heatmap',
+                colorscale: 'RdBu',
+                hovertemplate: '位置: %{x}<br>维度: %{y}<br>值: %{z}<extra></extra>'
+            }], {
+                title: 'Transformer位置编码矩阵',
+                xaxis: {title: '位置'},
+                yaxis: {title: '维度'},
+                height: 400
+            });
+        }
+        
+        // 动画控制
+        function animateConvolution() {
+            // 实现动画逻辑
+            console.log('动画播放中...');
+        }
+        
+        function pauseConvolution() {
+            // 实现暂停逻辑
+            console.log('动画暂停');
+        }
+        
+        // 更新内积计算
+        function updateInnerProduct() {
+            const angle1 = parseFloat(document.getElementById('v1Angle').value) * Math.PI / 180;
+            const angle2 = parseFloat(document.getElementById('v2Angle').value) * Math.PI / 180;
+            
+            const v1 = [Math.cos(angle1) * 2, Math.sin(angle1) * 2];
+            const v2 = [Math.cos(angle2) * 1.5, Math.sin(angle2) * 1.5];
+            
+            const innerProduct = v1[0] * v2[0] + v1[1] * v2[1];
+            const angle = Math.acos(innerProduct / (Math.sqrt(v1[0]**2 + v1[1]**2) * Math.sqrt(v2[0]**2 + v2[1]**2)));
+            
+            const data = [
+                {
+                    x: [0, v1[0]], y: [0, v1[1]],
+                    mode: 'lines+markers', name: '向量 v₁',
+                    line: {color: 'blue', width: 4}, marker: {size: 10}
+                },
+                {
+                    x: [0, v2[0]], y: [0, v2[1]],
+                    mode: 'lines+markers', name: '向量 v₂',
+                    line: {color: 'red', width: 4}, marker: {size: 10}
+                }
+            ];
+            
+            Plotly.redraw('innerProductCalc', data, {
+                title: `内积计算：${innerProduct.toFixed(3)}, 夹角：${(angle * 180 / Math.PI).toFixed(1)}°`,
+                xaxis: {title: 'x', scaleanchor: "y", scaleratio: 1},
+                yaxis: {title: 'y', scaleanchor: "x", scaleratio: 1},
+                height: 400
+            });
+        }
+        
+        // 页面加载完成后初始化
+        window.addEventListener('load', initializePlots);
+    </script>
+</body>
+</html>
