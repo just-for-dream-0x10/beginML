@@ -148,18 +148,6 @@ ml/
 - Fundamental understanding of calculus and linear algebra
 - Familiarity with machine learning concepts (recommended)
 
-### **Installation**
-```bash
-# Clone the repository
-git clone https://github.com/your-username/ml.git
-cd ml
-
-# Install dependencies (recommended)
-pip install -r requirements.txt
-
-# Or install individual packages
-pip install tensorflow torch numpy matplotlib plotly jupyter
-```
 
 ### **Quick Tour**
 1. **Start with Mathematics**: [Mathematical Foundations](./other/math/)
